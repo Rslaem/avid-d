@@ -2,7 +2,7 @@ package batchdkg
 
 import (
 	"github.com/Nik-U/pbc"
-	"log"
+	//"log"
 	"math/big"
 	//"strconv"
 )
@@ -77,5 +77,5 @@ func (dkg *BatchDKG) PKRecStep3(){
 		//poly, _ := LagrangeInterpolation(D_big, tmp, dkg.param.n)
 		dkg.pk[i] = tmp
 	}
-	log.Printf("the public key:\n %v", dkg.pk)
+	//log.Printf("the public key:\n %v", dkg.pk)
 }

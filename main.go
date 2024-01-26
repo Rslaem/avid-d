@@ -692,7 +692,8 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	file2.Write([]byte(fmt.Sprintf("bandwidth %d bytes\n", s.GetBandwidth())))
 	file2.Write([]byte(fmt.Sprintf("cost time %vs", end.Sub(start).Seconds())))
 	file2.Close()
-	time.Sleep(60 * time.Second)
+	fmt.Println("finished")
+	time.Sleep(15 * time.Second)
 }
 
 func isExist(path string) bool {
