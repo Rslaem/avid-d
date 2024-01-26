@@ -97,7 +97,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum/8))
 	s.Register("/test", s.Incoming.ReceivePost)
 	s.Init()
-	var mutex sync.Mutex
+	var mutex sync.RWMutex
 
 	disperse1 := make([]bool, nodeNum)
 	disperse2 := make([]bool, nodeNum)
@@ -136,7 +136,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					mutex.Lock()
 					receiveChunk1[i][j] = &chunkmessage.Chunk
 					ndisperse1s[i]++
-					log.Printf("[node %d] receive chunk from node %d in disperse1, chunk number %d", id, i, ndisperse1s[i])
+					//log.Printf("[node %d] receive chunk from node %d in disperse1, chunk number %d", id, i, ndisperse1s[i])
 					mutex.Unlock()
 				}
 
@@ -152,7 +152,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					mutex.Lock()
 					receiveChunk2[i][j] = &chunkmessage.Chunk
 					ndisperse2s[i]++
-					log.Printf("[node %d] receive chunk from node %d in disperse2, chunk number %d", id, i, ndisperse2s[i])
+					//log.Printf("[node %d] receive chunk from node %d in disperse2, chunk number %d", id, i, ndisperse2s[i])
 					mutex.Unlock()
 				}
 			} else if m.DataType == "disperse3" || m.DataType == "retrieve3" {
@@ -167,7 +167,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					mutex.Lock()
 					receiveChunk3[i][j] = &chunkmessage.Chunk
 					ndisperse3s[i]++
-					log.Printf("[node %d] receive chunk from node %d in disperse2, chunk number %d", id, i, ndisperse3s[i])
+					//log.Printf("[node %d] receive chunk from node %d in disperse2, chunk number %d", id, i, ndisperse3s[i])
 					mutex.Unlock()
 				}
 			} else {
@@ -269,9 +269,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}
 		go func(i int) {
 			for {
-				mutex.Lock()
+				mutex.RLock()
 				n := receiveChunk1[i][id] == nil
-				mutex.Unlock()
+				mutex.RUnlock()
 				if !n {
 					break
 				}
@@ -281,14 +281,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
-
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
-	}
-
 	for index := 0; index < nodeNum; index++ {
 		go func(index int) {
-			log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk1[index])
+			//log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk1[index])
 			retrievechunk := receiveChunk1[index][id].(*ReedSolomonChunk)
 			data := ChunkMessage{
 				Index: index,
@@ -304,47 +299,42 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				if index == j || j == id {
 					continue
 				}
-				log.Printf("[node %d] retrieve1 send to node %d msg: %s", id, j, jsonData)
-				respond, _ := s.Outgoing.SendPost(j, "retrieve1", "test", jsonData)
-				log.Printf("[node %d] retrieve1 send to node %d respond: %s", id, j, string(respond))
+				//log.Printf("[node %d] retrieve1 send to node %d msg: %s", id, j, jsonData)
+				s.Outgoing.SendPost(j, "retrieve1", "test", jsonData)
+				//log.Printf("[node %d] retrieve1 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
 	}
 
 	wg.Add(nodeNum - 1)
 	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
+		//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
 		if i == id {
 			continue
 		}
 		go func(i int) {
 			for {
-				mutex.Lock()
+				mutex.RLock()
 				n := ndisperse1s[i]
-				mutex.Unlock()
-				log.Printf("[node %d] index %d chunks number %d", id, i, n)
+				mutex.RUnlock()
+				//log.Printf("[node %d] index %d chunks number %d", id, i, n)
 				if n > nodeNum-2*f {
 					disperse1[i] = true
 					break
 				}
-				log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
+				//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
 				time.Sleep(2 * time.Second)
 			}
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
-
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk1[i])
-	}
-
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int) {
 			var msg Payload
 			tmp := make([]ErasureCodeChunk, 0)
-			mutex.Lock()
+			mutex.RLock()
 			for _, chunk := range receiveChunk1[i] {
 				if chunk != nil {
 					tmp = append(tmp, chunk)
@@ -353,7 +343,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					break
 				}
 			}
-			mutex.Unlock()
+			mutex.RUnlock()
 			codec.Decode(tmp, &msg)
 			dp1 := DKGPayload1{}
 			json.Unmarshal(msg.([]byte), &dp1)
@@ -365,7 +355,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 			mutex.Lock()
 			dkg.SetShares(i, shares)
 			mutex.Unlock()
-			log.Printf("[node %d] receive shares from node: %d:\n %v \n", s.ID, i, shares)
+			//log.Printf("[node %d] receive shares from node: %d:\n %v \n", s.ID, i, shares)
 			r := make([]*big.Int, secretNum)
 			for k := 0; k < secretNum; k++ {
 				r[k] = new(big.Int).SetBytes(dp1.R[k])
@@ -383,6 +373,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	// start disperse the second payload //
 	//                                   //
 	///////////////////////////////////////
+	log.Printf("2")
 	var dkgPayload2 DKGPayload2
 	dkgPayload2.Ga = make([][][]byte, nodeNum)
 	for i := 0; i < nodeNum; i++ {
@@ -424,8 +415,8 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				respond, _ := s.Outgoing.SendPost(i, "disperse2", "test", jsonData)
-				log.Printf("[node %d] disperse2 send to node %d respond: %s", id, i, string(respond))
+				s.Outgoing.SendPost(i, "disperse2", "test", jsonData)
+				//log.Printf("[node %d] disperse2 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
 			fmt.Println("Failed Value =", rschunk, "Ok =", ok)
@@ -439,9 +430,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}
 		go func(i int) {
 			for {
-				mutex.Lock()
+				mutex.RLock()
 				n := receiveChunk2[i][id] == nil
-				mutex.Unlock()
+				mutex.RUnlock()
 				if !n {
 					break
 				}
@@ -452,13 +443,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	}
 	wg.Wait()
 
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
-	}
-
 	for index := 0; index < nodeNum; index++ {
 		go func(index int) {
-			log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk2[index])
+			//log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk2[index])
 			retrievechunk := receiveChunk2[index][id].(*ReedSolomonChunk)
 			data := ChunkMessage{
 				Index: index,
@@ -474,47 +461,42 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				if index == j || j == id {
 					continue
 				}
-				log.Printf("[node %d] retrieve2 send to node %d msg: %s", id, j, jsonData)
-				respond, _ := s.Outgoing.SendPost(j, "retrieve2", "test", jsonData)
-				log.Printf("[node %d] retrieve2 send to node %d respond: %s", id, j, string(respond))
+				//log.Printf("[node %d] retrieve2 send to node %d msg: %s", id, j, jsonData)
+				s.Outgoing.SendPost(j, "retrieve2", "test", jsonData)
+				//log.Printf("[node %d] retrieve2 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
 	}
 
 	wg.Add(nodeNum - 1)
 	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
+		//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
 		if i == id {
 			continue
 		}
 		go func(i int) {
 			for {
-				mutex.Lock()
+				mutex.RLock()
 				n := ndisperse2s[i]
-				mutex.Unlock()
-				log.Printf("[node %d] index %d chunks number %d", id, i, n)
+				mutex.RUnlock()
+				//log.Printf("[node %d] index %d chunks number %d", id, i, n)
 				if n > nodeNum-2*f {
 					disperse2[i] = true
 					break
 				}
-				log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
+				//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
 				time.Sleep(2 * time.Second)
 			}
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
-
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk2[i])
-	}
-
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int) {
 			var msg Payload
 			tmp := make([]ErasureCodeChunk, 0)
-			mutex.Lock()
+			mutex.RLock()
 			for _, chunk := range receiveChunk2[i] {
 				if chunk != nil {
 					tmp = append(tmp, chunk)
@@ -523,7 +505,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					break
 				}
 			}
-			mutex.Unlock()
+			mutex.RUnlock()
 			codec.Decode(tmp, &msg)
 			dp2 := DKGPayload2{}
 			json.Unmarshal(msg.([]byte), &dp2)
@@ -536,7 +518,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				}
 			}
 			mutex.Lock()
-			log.Printf("[node %d] receive commitment from node %d", s.ID, i)
+			//log.Printf("[node %d] receive commitment from node %d", s.ID, i)
 			dkg.SetComms(i, ga)
 			mutex.Unlock()
 			wg.Done()
@@ -547,7 +529,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	// start disperse the third payload  //
 	//                                   //
 	///////////////////////////////////////
-
+	log.Printf("3")
 	var dkgPayload3 DKGPayload3
 	dkgPayload3.Asum = make([][]byte, nodeNum)
 	aijsum := dkg.Getaijsum()
@@ -588,8 +570,8 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				respond, _ := s.Outgoing.SendPost(i, "disperse3", "test", jsonData)
-				log.Printf("[node %d] disperse3 send to node %d respond: %s", id, i, string(respond))
+				s.Outgoing.SendPost(i, "disperse3", "test", jsonData)
+				//log.Printf("[node %d] disperse3 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
 			fmt.Println("Failed Value =", rschunk, "Ok =", ok)
@@ -615,11 +597,6 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
-
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
-	}
-
 	for index := 0; index < nodeNum; index++ {
 		go func(index int) {
 			log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk3[index])
@@ -653,9 +630,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}
 		go func(i int) {
 			for {
-				mutex.Lock()
+				mutex.RLock()
 				n := ndisperse3s[i]
-				mutex.Unlock()
+				mutex.RUnlock()
 				log.Printf("[node %d] index %d chunks number %d", id, i, n)
 				if n > nodeNum-2*f {
 					disperse3[i] = true
@@ -668,17 +645,12 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
-
-	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
-	}
-
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int) {
 			var msg Payload
 			tmp := make([]ErasureCodeChunk, 0)
-			mutex.Lock()
+			mutex.RLock()
 			for _, chunk := range receiveChunk3[i] {
 				if chunk != nil {
 					tmp = append(tmp, chunk)
@@ -687,7 +659,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					break
 				}
 			}
-			mutex.Unlock()
+			mutex.RUnlock()
 			codec.Decode(tmp, &msg)
 			dp3 := DKGPayload3{}
 
