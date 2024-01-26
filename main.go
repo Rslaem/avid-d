@@ -724,7 +724,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		os.MkdirAll("/home/ubuntu/testdata/",os.ModePerm)
 	}
 	os.Mkdir(fmt.Sprintf("/home/ubuntu/testdata/%d_%d",nodeNum,secretNum), 0777)
-	output := fmt.Sprintf("/home/ubuntu/testdata/%d_%d/node%d", path, nodeNum, secretNum, s.ID)
+	output := fmt.Sprintf("/home/ubuntu/testdata/%d_%d/node%d", nodeNum, secretNum, s.ID)
 	file2, _ := os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	file2.Write([]byte(fmt.Sprintf("send %d bytes\n", s.GetAmount())))
 	file2.Write([]byte(fmt.Sprintf("bandwidth %d bytes\n", s.GetBandwidth())))
