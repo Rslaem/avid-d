@@ -615,9 +615,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				if index == j || j == id {
 					continue
 				}
-				log.Printf("[node %d] retrieve3 send to node %d msg: %s", id, j, jsonData)
-				respond, _ := s.Outgoing.SendPost(j, "retrieve3", "test", jsonData)
-				log.Printf("[node %d] retrieve3 send to node %d respond: %s", id, j, string(respond))
+				//log.Printf("[node %d] retrieve3 send to node %d msg: %s", id, j, jsonData)
+				s.Outgoing.SendPost(j, "retrieve3", "test", jsonData)
+				//log.Printf("[node %d] retrieve3 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
 	}
@@ -675,8 +675,13 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	}
 	wg.Wait()
 	for i := 0; i < nodeNum; i++ {
-		flag := dkg.FaultDetectPhase2(i)
-		log.Printf("[node %d] verify node %v\n", s.ID, flag)
+		go func(i int){
+			mutex.RLock()
+			flag := dkg.FaultDetectPhase2(i)
+			mutex.RUnlock()
+			log.Printf("[node %d] verify node %v\n", s.ID, flag)
+		}(i)
+		
 	}
 /*
 	wg.Add(nodeNum)

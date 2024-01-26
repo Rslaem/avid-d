@@ -2,7 +2,7 @@ package batchdkg
 
 import (
 	//"github.com/Nik-U/pbc"
-	"log"
+	//"log"
 	"math/big"
 	//"TMAABE/kzg"
 	//"strconv"
@@ -19,8 +19,8 @@ func (dkg *BatchDKG)FaultDetectPhase1(){
 	}
 	dkg.rsum = r_sum
 	for i:=0;i<dkg.nodeNum;i++{
-		log.Println(dkg.sharesReceived[i])
-		log.Println(r_sum)
+		//log.Println(dkg.sharesReceived[i])
+		//log.Println(r_sum)
 		dkg.aijsum[i] = step2_calculates(dkg.sharesReceived[i], r_sum, dkg.param.n)
 	}
 }
