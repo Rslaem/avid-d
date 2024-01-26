@@ -352,17 +352,13 @@ func test(nodeNum, secretNum, f, id int, path string) {
 			for k := 0; k < secretNum+1; k++ {
 				shares[k] = new(big.Int).SetBytes(dp1.Z[s.ID][k])
 			}
-			mutex.Lock()
 			dkg.SetShares(i, shares)
-			mutex.Unlock()
 			//log.Printf("[node %d] receive shares from node: %d:\n %v \n", s.ID, i, shares)
 			r := make([]*big.Int, secretNum)
 			for k := 0; k < secretNum; k++ {
 				r[k] = new(big.Int).SetBytes(dp1.R[k])
 			}
-			mutex.Lock()
 			dkg.ReceiveR(i, r)
-			mutex.Unlock()
 			wg.Done()
 		}(i)
 	}
@@ -394,11 +390,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	rschunk = make([]ReedSolomonChunk, nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		if i == id {
-			mutex.Lock()
 			receiveChunk2[i] = eschunk
 			ndisperse2s[i] = nodeNum
 			disperse2[i] = true
-			mutex.Unlock()
 			continue
 		}
 		if tmp, ok := eschunk[i].(*ReedSolomonChunk); ok {
@@ -517,10 +511,8 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					ga[j][k] = pairing.NewG1().SetBytes(dp2.Ga[j][k])
 				}
 			}
-			mutex.Lock()
 			//log.Printf("[node %d] receive commitment from node %d", s.ID, i)
 			dkg.SetComms(i, ga)
-			mutex.Unlock()
 			wg.Done()
 		}(i)
 	}
@@ -549,11 +541,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 
 	for i := 0; i < nodeNum; i++ {
 		if i == id {
-			mutex.Lock()
 			receiveChunk3[i] = eschunk
 			ndisperse3s[i] = nodeNum
 			disperse3[i] = true
-			mutex.Unlock()
 			continue
 		}
 		if tmp, ok := eschunk[i].(*ReedSolomonChunk); ok {
@@ -668,18 +658,14 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		for i := 0; i < nodeNum; i++ {
 			aijsumReceived[i] = new(big.Int).SetBytes(dp3.Asum[i])
 		}
-		mutex.Lock()
 		dkg.Receiveaijsum(i, aijsumReceived)
-		mutex.Unlock()
 		wg.Done()
 	}
 	wg.Wait()
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int) {
-			mutex.RLock()
 			flag := dkg.FaultDetectPhase2(i)
-			mutex.RUnlock()
 			log.Printf("[node %d] verify node %v\n", s.ID, flag)
 			wg.Done()
 		}(i)
