@@ -55,13 +55,15 @@ func (p *outgoingPeer) init() {
 					fmt.Printf("parse url requestUrl failed,err:%v\n", err)
 				}
 				u.RawQuery = data.Encode() // URL encode
-				resp, err := http.Get(u.String())
+				_, err = http.Get(u.String())
 				if err != nil {
-					log.Printf("[node %d] failed connect to node %d on %s\n", p.ourID, id, ip)
+					//log.Printf("[node %d] failed connect to node %d on %s\n", p.ourID, id, ip)
+					data = nil
 					time.Sleep(3 * time.Second)
 					continue
 				} else {
-					log.Printf("[node %d] connect to node %d on %s: %s\n", p.ourID, id, ip, resp.Status)
+					data = nil
+					//log.Printf("[node %d] connect to node %d on %s: %s\n", p.ourID, id, ip, resp.Status)
 					wg.Done()
 					break
 				}
