@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -71,7 +72,7 @@ func SayHello(w http.ResponseWriter, r *http.Request) {
 
 func NewIncomingPeer(ourID int, num int, ourAddr string, mutex *sync.Mutex) *incomingPeer {
 	server := &http.Server{
-		Addr:         ourAddr,
+		Addr:         ":"+strings.Split(ourAddr, ":")[1],
 		Handler:      http.NewServeMux(),
 		ReadTimeout:  2 * time.Second,
 		WriteTimeout: 2 * time.Second,
