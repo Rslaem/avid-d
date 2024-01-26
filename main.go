@@ -720,14 +720,14 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	wg.Wait()
 	dkg.PKRecStep3()
 	end := time.Now()
-	os.Mkdir(fmt.Sprintf("/home/testdata/%d_%d",nodeNum,secretNum), 0777)
+	os.Mkdir(fmt.Sprintf("/home/ubuntu/testdata/%d_%d",nodeNum,secretNum), 0777)
 	output := fmt.Sprintf("%s/%d_%d/node%d", path, nodeNum, secretNum, s.ID)
 	file2, _ := os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	file2.Write([]byte(fmt.Sprintf("send %d bytes\n", s.GetAmount())))
 	file2.Write([]byte(fmt.Sprintf("bandwidth %d bytes\n", s.GetBandwidth())))
 	file2.Write([]byte(fmt.Sprintf("cost time %vs", end.Sub(start).Seconds())))
 	file2.Close()
-	select {}
+	time.Sleep(2 * time.Second)
 }
 func main() {
 
@@ -747,8 +747,13 @@ func main() {
 	if *Path == "" {
 		log.Fatalln("path of node information is empty")
 	}
+	var wg sync.WaitGroup
+	wg.Add(*N/8)
 	for i := 0; i < *N/8; i++ {
-		go test(*N, *S, *F, i+(*ID)*(*N/8), *Path)
+		go func(i int){
+			test(*N, *S, *F, i+(*ID)*(*N/8), *Path)
+			wg.Done
+		}(i)
 	}
-	select {}
+	wg.Wait()
 }
