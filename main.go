@@ -734,12 +734,21 @@ func main() {
 	N := flag.Int("n", 4, "total nodes number")
 	F := flag.Int("f", 1, "number of faulty nodes")
 	S := flag.Int("s", 2, "number of secret")
-	//ID := flag.Int("id", 0, "node id")
+	ID := flag.Int("id", 0, "server id")
 	Path := flag.String("path", "/home/ubuntu/", "node info path")
 	flag.Parse()
 	//generateIPList(*N, *Path)
-	for i := 0; i < *N; i++ {
-		go test(*N, *S, *F, i, *Path)
+	if *F == 0 {
+		log.Fatalln("F must be greater than 0")
+	}
+	if *N < *F*3+1 {
+		log.Fatalln("N must be greater or equal to 3F+1")
+	}
+	if *str == "" {
+		log.Fatalln("path of node information is empty")
+	}
+	for i := 0; i < *N/8; i++ {
+		go test(*N, *K, *F, i+(*ID)*(*N/8), *str)
 	}
 	select {}
 }
