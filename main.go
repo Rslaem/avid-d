@@ -720,8 +720,11 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	wg.Wait()
 	dkg.PKRecStep3()
 	end := time.Now()
+	if !isExist("/home/ubuntu/testdata/") {
+		os.MkdirAll("/home/ubuntu/testdata/",os.ModePerm)
+	}
 	os.Mkdir(fmt.Sprintf("/home/ubuntu/testdata/%d_%d",nodeNum,secretNum), 0777)
-	output := fmt.Sprintf("%s/%d_%d/node%d", path, nodeNum, secretNum, s.ID)
+	output := fmt.Sprintf("/home/ubuntu/testdata/%d_%d/node%d", path, nodeNum, secretNum, s.ID)
 	file2, _ := os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	file2.Write([]byte(fmt.Sprintf("send %d bytes\n", s.GetAmount())))
 	file2.Write([]byte(fmt.Sprintf("bandwidth %d bytes\n", s.GetBandwidth())))
@@ -729,6 +732,18 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	file2.Close()
 	time.Sleep(2 * time.Second)
 }
+
+func isExist(path string) bool {
+	_, err := os.Stat(path)    //os.Stat获取文件信息
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
 func main() {
 
 	N := flag.Int("n", 4, "total nodes number")
