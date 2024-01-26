@@ -253,8 +253,8 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				respond, _ := s.Outgoing.SendPost(i, "disperse1", "test", jsonData)
-				log.Printf("[node %d] disperse1 send to node %d respond: %s", id, i, string(respond))
+				s.Outgoing.SendPost(i, "disperse1", "test", jsonData)
+				//log.Printf("[node %d] disperse1 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
 			fmt.Println("Failed Value =", rschunk, "Ok =", ok)
@@ -599,7 +599,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	wg.Wait()
 	for index := 0; index < nodeNum; index++ {
 		go func(index int) {
-			log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk3[index])
+			//log.Printf("[node %d] index %d chunks %v\n", id, index, receiveChunk3[index])
 			retrievechunk := receiveChunk3[index][id].(*ReedSolomonChunk)
 			data := ChunkMessage{
 				Index: index,
@@ -624,7 +624,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 
 	wg.Add(nodeNum - 1)
 	for i := 0; i < nodeNum; i++ {
-		log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
+		//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
 		if i == id {
 			continue
 		}
@@ -633,12 +633,12 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				mutex.RLock()
 				n := ndisperse3s[i]
 				mutex.RUnlock()
-				log.Printf("[node %d] index %d chunks number %d", id, i, n)
+				//log.Printf("[node %d] index %d chunks number %d", id, i, n)
 				if n > nodeNum-2*f {
 					disperse3[i] = true
 					break
 				}
-				log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
+				//log.Printf("[node %d] index %d chunks %v\n", id, i, receiveChunk3[i])
 				time.Sleep(2 * time.Second)
 			}
 			wg.Done()

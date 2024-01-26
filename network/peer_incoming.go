@@ -48,7 +48,7 @@ func (p *incomingPeer) ReceivePost(w http.ResponseWriter, r *http.Request) {
 		if lenth != len([]byte(content)) {
 			fmt.Fprintln(w, "message too long")
 		} else {
-			fmt.Fprintf(w, "node %d receive message", p.ourID)
+			//fmt.Fprintf(w, "node %d receive message", p.ourID)
 			p.transmit <- HttpMessage{
 				DataType: dataType,
 				Content:  []byte(content),
