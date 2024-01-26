@@ -20,7 +20,6 @@ type outgoingPeer struct {
 	ready      bool
 	totalBytes int
 	maxBytes   int
-	*http.Client
 }
 
 func NewOutgoingPeer(id, num int, addr string, peers []peer, mutex *sync.Mutex) *outgoingPeer {
@@ -33,7 +32,6 @@ func NewOutgoingPeer(id, num int, addr string, peers []peer, mutex *sync.Mutex) 
 		ready:      false,
 		totalBytes: 0,
 		maxBytes:   0,
-		Client:     &http.Client{},
 	}
 	return p
 }
@@ -78,6 +76,9 @@ func (p *outgoingPeer) init() {
 
 func (p *outgoingPeer) SendPost(id int, dataType, api string, data []byte) ([]byte, error) {
 	var ip string
+	Client := &http.Client{
+		Timeout:   30 * time.Second,
+	}
 	for _, peer := range p.peers {
 		if id == peer.Id {
 			ip = peer.Addr
@@ -107,7 +108,7 @@ func (p *outgoingPeer) SendPost(id int, dataType, api string, data []byte) ([]by
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
-	resp, err := p.Do(request)
+	resp, err := Client.Do(request)
 	if err != nil {
 		log.Println(err.Error())
 		return nil, err
