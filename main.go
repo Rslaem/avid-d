@@ -706,7 +706,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		flag := dkg.FaultDetectPhase2(i)
 		log.Printf("[node %d] verify node %v\n", s.ID, flag)
 	}
-
+/*
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int) {
@@ -717,7 +717,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 			wg.Done()
 		}(i)
 	}
-	wg.Wait()
+	wg.Wait()*/
 	dkg.PKRecStep3()
 	end := time.Now()
 	if !isExist("/home/ubuntu/testdata/") {
