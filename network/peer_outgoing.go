@@ -61,7 +61,6 @@ func (p *outgoingPeer) init() {
 				if err != nil {
 					//log.Printf("[node %d] failed connect to node %d on %s\n", p.ourID, id, ip)
 					time.Sleep(10 * time.Second)
-					resp.Body.Close()
 					continue
 				} else {
 					//log.Printf("[node %d] connect to node %d on %s: %s\n", p.ourID, id, ip, resp.Status)
