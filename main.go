@@ -674,15 +674,17 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
+	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		go func(i int){
 			mutex.RLock()
 			flag := dkg.FaultDetectPhase2(i)
 			mutex.RUnlock()
 			log.Printf("[node %d] verify node %v\n", s.ID, flag)
+			wg.Done()
 		}(i)
-		
 	}
+	wg.Wait()
 /*
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
