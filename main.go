@@ -199,7 +199,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	for i := 0; i < nodeNum; i++ {
 		dkgPayload1.Z[i] = make([][]byte, secretNum+1)
 		shares := dkg.GetShares()[i]
-		log.Printf("[node %d] generat shares to node %d\n %v \n", s.ID, i, shares)
+		//log.Printf("[node %d] generat shares to node %d\n %v \n", s.ID, i, shares)
 		for k := 0; k < secretNum+1; k++ {
 			dkgPayload1.Z[i][k] = shares[k].Bytes()
 		}
@@ -220,7 +220,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				//fmt.Println(err)
 			}
 		}()*/
-
+	log.Printf("1")
 	var payload Payload
 	jsonP, _ := json.Marshal(&dkgPayload1)
 	payload = jsonP
