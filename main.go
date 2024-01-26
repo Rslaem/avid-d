@@ -97,6 +97,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	var mutex sync.RWMutex
 	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum/32), &mutex)
 	s.Register("/test", s.Incoming.ReceivePost)
+	s.Register("/disperse1", s.Incoming.ReceivePost)
+	s.Register("/disperse2", s.Incoming.ReceivePost)
+	s.Register("/disperse3", s.Incoming.ReceivePost)
 	s.Init()
 
 	disperse1 := make([]bool, nodeNum)
@@ -253,7 +256,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				s.Outgoing.SendPost(i, "disperse1", "test", jsonData)
+				s.Outgoing.SendPost(i, "disperse1", "disperse1", jsonData)
 				//log.Printf("[node %d] disperse1 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
@@ -300,7 +303,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					continue
 				}
 				//log.Printf("[node %d] retrieve1 send to node %d msg: %s", id, j, jsonData)
-				s.Outgoing.SendPost(j, "retrieve1", "test", jsonData)
+				s.Outgoing.SendPost(j, "retrieve1", "disperse1", jsonData)
 				//log.Printf("[node %d] retrieve1 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
@@ -409,7 +412,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				s.Outgoing.SendPost(i, "disperse2", "test", jsonData)
+				s.Outgoing.SendPost(i, "disperse2", "disperse2", jsonData)
 				//log.Printf("[node %d] disperse2 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
@@ -456,7 +459,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					continue
 				}
 				//log.Printf("[node %d] retrieve2 send to node %d msg: %s", id, j, jsonData)
-				s.Outgoing.SendPost(j, "retrieve2", "test", jsonData)
+				s.Outgoing.SendPost(j, "retrieve2", "disperse2", jsonData)
 				//log.Printf("[node %d] retrieve2 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
@@ -560,7 +563,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					log.Printf("json Marshal error: %v", err)
 				}
 				//log.Printf("json data: %v", jsonData)
-				s.Outgoing.SendPost(i, "disperse3", "test", jsonData)
+				s.Outgoing.SendPost(i, "disperse3", "disperse3", jsonData)
 				//log.Printf("[node %d] disperse3 send to node %d respond: %s", id, i, string(respond))
 			}(i)
 		} else {
@@ -606,7 +609,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 					continue
 				}
 				//log.Printf("[node %d] retrieve3 send to node %d msg: %s", id, j, jsonData)
-				s.Outgoing.SendPost(j, "retrieve3", "test", jsonData)
+				s.Outgoing.SendPost(j, "retrieve3", "disperse3", jsonData)
 				//log.Printf("[node %d] retrieve3 send to node %d respond: %s", id, j, string(respond))
 			}
 		}(index)
