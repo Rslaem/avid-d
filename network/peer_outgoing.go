@@ -114,12 +114,12 @@ func (p *outgoingPeer) SendPost(id int, dataType, api string, data []byte) ([]by
 	request.Header.Set("Idempotency-Key", fmt.Sprintf("%d%s%d", p.ourID, dataType, id))
 	resp, err := Client.Do(request)
 	if err != nil {
-		log.Println(err.Error())
+		//log.Println(err.Error())
 		return nil, err
 	}
 	respBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println(err.Error())
+		//log.Println(err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
