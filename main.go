@@ -669,7 +669,9 @@ func test(nodeNum, secretNum, f, id int, path string) {
 			for i := 0; i < nodeNum; i++ {
 				aijsumReceived[i] = new(big.Int).SetBytes(dp3.Asum[i])
 			}
+			mutex.Lock()
 			dkg.Receiveaijsum(i, aijsumReceived)
+			mutex.Unlock()
 			wg.Done()
 		}(i)
 	}
@@ -709,7 +711,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	file2.Write([]byte(fmt.Sprintf("bandwidth %d bytes\n", s.GetBandwidth())))
 	file2.Write([]byte(fmt.Sprintf("cost time %vs", end.Sub(start).Seconds())))
 	file2.Close()
-	time.Sleep(2 * time.Second)
+	time.Sleep(60 * time.Second)
 }
 
 func isExist(path string) bool {
