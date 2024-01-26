@@ -44,17 +44,17 @@ func (p *outgoingPeer) init() {
 			continue
 		}
 		go func(ip string, id int) {
+			apiUrl := fmt.Sprintf("http://%s/ready", ip)
+			data := url.Values{}
+			data.Set("id", fmt.Sprint(p.ourID))
+			data.Set("addr", p.ourAddr)
+			u, err := url.ParseRequestURI(apiUrl)
+			if err != nil {
+				fmt.Printf("parse url requestUrl failed,err:%v\n", err)
+			}
+			u.RawQuery = data.Encode() // URL encode
 			for {
 				//log.Printf("[node %d] trying connect to node %d on %s", p.ourID, id, ip)
-				apiUrl := fmt.Sprintf("http://%s/ready", ip)
-				data := url.Values{}
-				data.Set("id", fmt.Sprint(p.ourID))
-				data.Set("addr", p.ourAddr)
-				u, err := url.ParseRequestURI(apiUrl)
-				if err != nil {
-					fmt.Printf("parse url requestUrl failed,err:%v\n", err)
-				}
-				u.RawQuery = data.Encode() // URL encode
 				_, err = http.Get(u.String())
 				if err != nil {
 					//log.Printf("[node %d] failed connect to node %d on %s\n", p.ourID, id, ip)
@@ -79,7 +79,7 @@ func (p *outgoingPeer) init() {
 func (p *outgoingPeer) SendPost(id int, dataType, api string, data []byte) ([]byte, error) {
 	var ip string
 	Client := &http.Client{
-		Timeout:   30 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 	for _, peer := range p.peers {
 		if id == peer.Id {
