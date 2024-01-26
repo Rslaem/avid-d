@@ -634,7 +634,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 				n := ndisperse3s[i]
 				mutex.RUnlock()
 				//log.Printf("[node %d] index %d chunks number %d", id, i, n)
-				if n > nodeNum-2*f {
+				if n == nodeNum {
 					disperse3[i] = true
 					break
 				}
