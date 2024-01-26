@@ -2,6 +2,7 @@ package batchdkg
 
 import (
 	"math/big"
+	"sync"
 	//"log"
 	"github.com/Nik-U/pbc"
 )
@@ -48,17 +49,19 @@ type BatchDKG struct {
 	pk         []*pbc.Element
 	pkReceived [][]*pbc.Element
 
+	mutex *sync.RWMutex
+
 	// Step4 Public Key Shares Construction
 	falseList []int
 }
 
-func NewDKG(param *Parameters, secretNum int, nodeNum int, degree int) *BatchDKG {
+func NewDKG(param *Parameters, secretNum int, nodeNum int, degree int, mutex *sync.RWMutex) *BatchDKG {
 	dkg := new(BatchDKG)
 	dkg.param = param
 	dkg.degree = degree
 	dkg.secretNum = secretNum
 	dkg.nodeNum = nodeNum
-
+	dkg.mutex = mutex
 	dkg.secrets = make([]*big.Int, dkg.secretNum+1)
 	dkg.shares = make([][]*big.Int, dkg.nodeNum)
 	dkg.sharesReceived = make([][]*big.Int, dkg.nodeNum)

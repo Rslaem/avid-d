@@ -45,7 +45,9 @@ func (dkg *BatchDKG) PKRecVerify(i int)(bool){
 	left := pairing.NewG1().Set1()
 	for j:=0;j<len(dkg.index);j++{
 		lagCoeffecient := generate0LagrangeCoefficient(D_big, j, dkg.param.n)
+		dkg.mutex.RLock()
 		power := new(big.Int).Mul(lagCoeffecient, dkg.aijsumReceived[i][j])
+		dkg.mutex.RUnlock()
 		tmp := pairing.NewG1().PowBig(g, power)
 		left.Mul(left, tmp)
 		
@@ -62,7 +64,9 @@ func (dkg *BatchDKG) PKRecVerify(i int)(bool){
 		tmp := pairing.NewG1().PowBig(gi0[i], dkg.rsum[i])
 		right.Mul(right, tmp)
 	}
+	dkg.mutex.Lock()
 	dkg.pkReceived[i] = gi0
+	dkg.mutex.Unlock()
 	return left.Equals(right)
 }
 

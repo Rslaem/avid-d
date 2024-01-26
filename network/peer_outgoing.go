@@ -16,7 +16,7 @@ type outgoingPeer struct {
 	ourAddr    string
 	num        int
 	peers      []peer
-	mutex      *sync.Mutex
+	mutex      *sync.RWMutex
 	ready      bool
 	totalBytes int
 	maxBytes   int

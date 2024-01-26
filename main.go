@@ -94,10 +94,10 @@ func ReadGlobalParameters(metadataPath string) *tmaabe.GlobalParameters {
 }
 
 func test(nodeNum, secretNum, f, id int, path string) {
-	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum/8))
+	var mutex sync.RWMutex
+	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum/8), &mutex)
 	s.Register("/test", s.Incoming.ReceivePost)
 	s.Init()
-	var mutex sync.RWMutex
 
 	disperse1 := make([]bool, nodeNum)
 	disperse2 := make([]bool, nodeNum)
@@ -189,7 +189,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	g := gp.GetGenerateG()
 	dkgParam := batchdkg.NewParam(pairing, g, n)
 	start := time.Now()
-	dkg := batchdkg.NewDKG(dkgParam, secretNum, nodeNum, f)
+	dkg := batchdkg.NewDKG(dkgParam, secretNum, nodeNum, f, &mutex)
 	dkg.ShareGen()
 
 	var dkgPayload1 DKGPayload1
@@ -685,18 +685,15 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
-	/*
-		wg.Add(nodeNum)
-		for i := 0; i < nodeNum; i++ {
-			go func(i int) {
-				mutex.Lock()
-				flag := dkg.PKRecVerify(i)
-				mutex.Unlock()
-				log.Printf("[node %d] verify node %v pk\n", s.ID, flag)
-				wg.Done()
-			}(i)
-		}
-		wg.Wait()*/
+	wg.Add(nodeNum)
+	for i := 0; i < nodeNum; i++ {
+		go func(i int) {
+			flag := dkg.PKRecVerify(i)
+			log.Printf("[node %d] verify node %v pk\n", s.ID, flag)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 	dkg.PKRecStep3()
 	end := time.Now()
 	if !isExist("/home/ubuntu/testdata/") {

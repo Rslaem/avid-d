@@ -14,7 +14,7 @@ type incomingPeer struct {
 	ourID    int
 	ourAddr  string
 	num      int
-	mutex    *sync.Mutex
+	mutex    *sync.RWMutex
 	nReadys  int
 	transmit chan HttpMessage
 	*http.Server
@@ -70,7 +70,7 @@ func SayHello(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func NewIncomingPeer(ourID int, num int, ourAddr string, mutex *sync.Mutex) *incomingPeer {
+func NewIncomingPeer(ourID int, num int, ourAddr string, mutex *sync.RWMutex) *incomingPeer {
 	server := &http.Server{
 		Addr:         ":"+strings.Split(ourAddr, ":")[1],
 		Handler:      http.NewServeMux(),

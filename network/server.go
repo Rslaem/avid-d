@@ -12,7 +12,7 @@ type Server struct {
 	ID       int
 	N        int
 	nodeInfo string
-	mutex    *sync.Mutex
+	mutex    *sync.RWMutex
 	Outgoing *outgoingPeer
 	Incoming *incomingPeer
 }
@@ -22,12 +22,12 @@ type peer struct {
 	Addr string
 }
 
-func NewServer(id, n int, path string) *Server {
+func NewServer(id, n int, path string, mutex *sync.RWMutex) *Server {
 	s := &Server{
 		ID:       id,
 		N:        n,
 		nodeInfo: path,
-		mutex:    &sync.Mutex{},
+		mutex:    mutex,
 	}
 
 	var peers []peer
