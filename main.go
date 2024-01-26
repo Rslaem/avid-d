@@ -647,38 +647,36 @@ func test(nodeNum, secretNum, f, id int, path string) {
 	wg.Wait()
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
-		go func(i int) {
-			var msg Payload
-			tmp := make([]ErasureCodeChunk, 0)
-			mutex.RLock()
-			for _, chunk := range receiveChunk3[i] {
-				if chunk != nil {
-					tmp = append(tmp, chunk)
-				}
-				if len(tmp) == nodeNum-2*f {
-					break
-				}
+		var msg Payload
+		tmp := make([]ErasureCodeChunk, 0)
+		mutex.RLock()
+		for _, chunk := range receiveChunk3[i] {
+			if chunk != nil {
+				tmp = append(tmp, chunk)
 			}
-			mutex.RUnlock()
-			codec.Decode(tmp, &msg)
-			dp3 := DKGPayload3{}
+			if len(tmp) == nodeNum-2*f {
+				break
+			}
+		}
+		mutex.RUnlock()
+		codec.Decode(tmp, &msg)
+		dp3 := DKGPayload3{}
 
-			json.Unmarshal(msg.([]byte), &dp3)
-			//log.Printf("[node %d] retrieve: %v \n", s.ID, dp1)
-			aijsumReceived := make([]*big.Int, nodeNum)
-			for i := 0; i < nodeNum; i++ {
-				aijsumReceived[i] = new(big.Int).SetBytes(dp3.Asum[i])
-			}
-			mutex.Lock()
-			dkg.Receiveaijsum(i, aijsumReceived)
-			mutex.Unlock()
-			wg.Done()
-		}(i)
+		json.Unmarshal(msg.([]byte), &dp3)
+		//log.Printf("[node %d] retrieve: %v \n", s.ID, dp1)
+		aijsumReceived := make([]*big.Int, nodeNum)
+		for i := 0; i < nodeNum; i++ {
+			aijsumReceived[i] = new(big.Int).SetBytes(dp3.Asum[i])
+		}
+		mutex.Lock()
+		dkg.Receiveaijsum(i, aijsumReceived)
+		mutex.Unlock()
+		wg.Done()
 	}
 	wg.Wait()
 	wg.Add(nodeNum)
 	for i := 0; i < nodeNum; i++ {
-		go func(i int){
+		go func(i int) {
 			mutex.RLock()
 			flag := dkg.FaultDetectPhase2(i)
 			mutex.RUnlock()
@@ -687,24 +685,24 @@ func test(nodeNum, secretNum, f, id int, path string) {
 		}(i)
 	}
 	wg.Wait()
-/*
-	wg.Add(nodeNum)
-	for i := 0; i < nodeNum; i++ {
-		go func(i int) {
-			mutex.Lock()
-			flag := dkg.PKRecVerify(i)
-			mutex.Unlock()
-			log.Printf("[node %d] verify node %v pk\n", s.ID, flag)
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()*/
+	/*
+		wg.Add(nodeNum)
+		for i := 0; i < nodeNum; i++ {
+			go func(i int) {
+				mutex.Lock()
+				flag := dkg.PKRecVerify(i)
+				mutex.Unlock()
+				log.Printf("[node %d] verify node %v pk\n", s.ID, flag)
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()*/
 	dkg.PKRecStep3()
 	end := time.Now()
 	if !isExist("/home/ubuntu/testdata/") {
-		os.MkdirAll("/home/ubuntu/testdata/",os.ModePerm)
+		os.MkdirAll("/home/ubuntu/testdata/", os.ModePerm)
 	}
-	os.Mkdir(fmt.Sprintf("/home/ubuntu/testdata/%d_%d",nodeNum,secretNum), 0777)
+	os.Mkdir(fmt.Sprintf("/home/ubuntu/testdata/%d_%d", nodeNum, secretNum), 0777)
 	output := fmt.Sprintf("/home/ubuntu/testdata/%d_%d/node%d", nodeNum, secretNum, s.ID)
 	file2, _ := os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	file2.Write([]byte(fmt.Sprintf("send %d bytes\n", s.GetAmount())))
@@ -715,7 +713,7 @@ func test(nodeNum, secretNum, f, id int, path string) {
 }
 
 func isExist(path string) bool {
-	_, err := os.Stat(path)    //os.Stat获取文件信息
+	_, err := os.Stat(path) //os.Stat获取文件信息
 	if err != nil {
 		if os.IsExist(err) {
 			return true
@@ -744,9 +742,9 @@ func main() {
 		log.Fatalln("path of node information is empty")
 	}
 	var wg sync.WaitGroup
-	wg.Add(*N/8)
+	wg.Add(*N / 8)
 	for i := 0; i < *N/8; i++ {
-		go func(i int){
+		go func(i int) {
 			test(*N, *S, *F, i+(*ID)*(*N/8), *Path)
 			wg.Done()
 		}(i)
