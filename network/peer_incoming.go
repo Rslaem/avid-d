@@ -22,12 +22,12 @@ type incomingPeer struct {
 
 func (p *incomingPeer) ready(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	data := r.URL.Query()
-	id := data.Get("id")
-	addr := data.Get("addr")
+	//data := r.URL.Query()
+	//id := data.Get("id")
+	//addr := data.Get("addr")
 	answer := `{"status": "ok"}`
 	w.Write([]byte(answer))
-	log.Printf("[node %d] get connect from node %s on %s", p.ourID, id, addr)
+	//log.Printf("[node %d] get connect from node %s on %s", p.ourID, id, addr)
 	p.mutex.Lock()
 	p.nReadys++
 	p.mutex.Unlock()

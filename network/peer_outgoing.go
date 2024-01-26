@@ -44,27 +44,29 @@ func (p *outgoingPeer) init() {
 			continue
 		}
 		go func(ip string, id int) {
-			apiUrl := fmt.Sprintf("http://%s/ready", ip)
-			data := url.Values{}
-			data.Set("id", fmt.Sprint(p.ourID))
-			data.Set("addr", p.ourAddr)
-			u, err := url.ParseRequestURI(apiUrl)
-			if err != nil {
-				fmt.Printf("parse url requestUrl failed,err:%v\n", err)
+			Client := &http.Client{
+				Timeout: 10 * time.Second,
 			}
-			u.RawQuery = data.Encode() // URL encode
+			apiUrl := fmt.Sprintf("http://%s/ready", ip)
+			req, _ := http.NewRequest("GET", apiUrl, nil)
+			q := req.URL.Query()
+			q.Add("id", fmt.Sprint(p.ourID))
+			q.Add("addr", p.ourAddr)
+			req.URL.RawQuery = q.Encode()
+			req.Close = true
+			req.Header.Add("Content-Type", "application/json")// URL encode
 			for {
 				//log.Printf("[node %d] trying connect to node %d on %s", p.ourID, id, ip)
-				_, err = http.Get(u.String())
+				resp, err := Client.Do(req)
 				if err != nil {
 					//log.Printf("[node %d] failed connect to node %d on %s\n", p.ourID, id, ip)
-					data = nil
-					time.Sleep(3 * time.Second)
+					time.Sleep(10 * time.Second)
+					resp.Body.Close()
 					continue
 				} else {
-					data = nil
 					//log.Printf("[node %d] connect to node %d on %s: %s\n", p.ourID, id, ip, resp.Status)
 					wg.Done()
+					resp.Body.Close()
 					break
 				}
 			}
