@@ -112,7 +112,7 @@ func (p *incomingPeer) serve() {
 			} else {
 				time.Sleep(3 * time.Second)
 			}
-			log.Printf("[node %d] waiting connect\n", p.ourID)
+			//log.Printf("[node %d] waiting connect\n", p.ourID)
 		}
 		wg.Done()
 	}()

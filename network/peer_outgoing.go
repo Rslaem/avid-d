@@ -45,7 +45,7 @@ func (p *outgoingPeer) init() {
 		}
 		go func(ip string, id int) {
 			for {
-				log.Printf("[node %d] trying connect to node %d on %s", p.ourID, id, ip)
+				//log.Printf("[node %d] trying connect to node %d on %s", p.ourID, id, ip)
 				apiUrl := fmt.Sprintf("http://%s/ready", ip)
 				data := url.Values{}
 				data.Set("id", fmt.Sprint(p.ourID))
