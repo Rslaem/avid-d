@@ -22,7 +22,7 @@ type outgoingPeer struct {
 	maxBytes   int
 }
 
-func NewOutgoingPeer(id, num int, addr string, peers []peer, mutex *sync.Mutex) *outgoingPeer {
+func NewOutgoingPeer(id, num int, addr string, peers []peer, mutex *sync.RWMutex) *outgoingPeer {
 	p := &outgoingPeer{
 		ourID:      id,
 		ourAddr:    addr,
