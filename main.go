@@ -752,7 +752,7 @@ func main() {
 	for i := 0; i < *N/8; i++ {
 		go func(i int){
 			test(*N, *S, *F, i+(*ID)*(*N/8), *Path)
-			wg.Done
+			wg.Done()
 		}(i)
 	}
 	wg.Wait()
