@@ -744,11 +744,11 @@ func main() {
 	if *N < *F*3+1 {
 		log.Fatalln("N must be greater or equal to 3F+1")
 	}
-	if *str == "" {
+	if *Path == "" {
 		log.Fatalln("path of node information is empty")
 	}
 	for i := 0; i < *N/8; i++ {
-		go test(*N, *K, *F, i+(*ID)*(*N/8), *str)
+		go test(*N, *S, *F, i+(*ID)*(*N/8), *Path)
 	}
 	select {}
 }
