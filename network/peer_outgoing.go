@@ -108,6 +108,7 @@ func (p *outgoingPeer) SendPost(id int, dataType, api string, data []byte) ([]by
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+	request.Header.Set("Idempotency-Key", fmt.Sprintf("%d%s%d", p.ourID, dataType, id))
 	resp, err := Client.Do(request)
 	if err != nil {
 		log.Println(err.Error())
