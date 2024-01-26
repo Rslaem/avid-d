@@ -94,7 +94,7 @@ func ReadGlobalParameters(metadataPath string) *tmaabe.GlobalParameters {
 }
 
 func test(nodeNum, secretNum, f, id int, path string) {
-	s := NewServer(id, nodeNum, path+"/iplist")
+	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum))
 	s.Register("/test", s.Incoming.ReceivePost)
 	s.Init()
 	var mutex sync.Mutex
