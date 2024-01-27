@@ -95,7 +95,7 @@ func ReadGlobalParameters(metadataPath string) *tmaabe.GlobalParameters {
 
 func test(nodeNum, secretNum, f, id int, path string) {
 	var mutex sync.RWMutex
-	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum/32), &mutex)
+	s := NewServer(id, nodeNum, fmt.Sprintf("%s/iplist_%d", path, nodeNum), &mutex)
 	s.Register("/test", s.Incoming.ReceivePost)
 	s.Register("/disperse1", s.Incoming.ReceivePost)
 	s.Register("/disperse2", s.Incoming.ReceivePost)
@@ -729,10 +729,10 @@ func main() {
 		log.Fatalln("path of node information is empty")
 	}
 	var wg sync.WaitGroup
-	wg.Add(*N / 32)
-	for i := 0; i < *N/32; i++ {
+	wg.Add(*N)
+	for i := 0; i < *N; i++ {
 		go func(i int) {
-			test(*N, *S, *F, i+(*ID)*(*N/32), *Path)
+			test(*N, *S, *F, i+(*ID)*(*N), *Path)
 			wg.Done()
 		}(i)
 	}
