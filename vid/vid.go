@@ -9,6 +9,7 @@ import (
 	//"encoding/gob"
 	//"bytes"
 
+	//. "github.com/QinYuuuu/avid-d/commit/merklecommitment"
 	. "github.com/QinYuuuu/avid-d/erasurecode"
 	"github.com/QinYuuuu/avid-d/hasher"
 )
@@ -249,9 +250,9 @@ func (v *VID) handleChunkResponse(from int, c ErasureCodeChunk) {
 	}
 
 	// record the chunk and we only take the first message
-	if !v.chunks[from].Stored() {
+	if v.chunks[from] == nil {
 		v.nChunks += 1
-		v.chunks[from].Store(c, v.DBPath)
+		v.chunks[from] = c
 	}
 	v.Printf("receiving chunk from node %v\n", from)
 }
@@ -263,7 +264,7 @@ func (v *VID) respondRequest(from, ourid int) []Message {
 	var msgs []Message
 	log.Printf("[node %d] handling request from node %d", v.ID, from)
 	// if we can respond to chunk requests
-	if v.canReleaseChunk && v.ourChunk.Stored() {
+	if v.canReleaseChunk && v.ourChunk != nil {
 		msg := &VIDMessage{}
 		msg.RespondChunk = true
 		msg.IndexID = v.IndexID
@@ -374,15 +375,13 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 		}
 
 		// if we have got our chunks, send out Echo
-		if !v.sentEcho && v.ourChunk.Stored() && v.ourEcho.Stored() {
+		if !v.sentEcho && v.ourChunk != nil {
 			for i := 0; i < v.N; i++ {
 				msg := &VIDMessage{}
-				msg.Echo = true
+				msg.Got = true
 				msg.FromID = v.ID
 				msg.IndexID = v.IndexID
 				msg.DestID = i
-				msg.PayloadChunk = v.ourChunk
-				msg.Checksum = v.ourEcho.Load()
 				msgs = append(msgs, msg)
 			}
 			v.sentEcho = true
@@ -406,25 +405,24 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 			v.requestUnanswered = nil
 		}
 	*/
-	// if we have got N-2F chunks, decode the dispersed file
+	// if we have got F+1 chunks, decode the dispersed file
 	if v.VIDPayloadState != nil {
-		if v.payload == nil && v.nChunks > v.N-v.F*2 {
+		if v.payload == nil && v.nChunks > v.F+1 {
 			// collect the chunks
-			chunks := make([]ErasureCodeChunk, v.N-v.F*2)
+			chunks := make([]ErasureCodeChunk, v.F+1)
 			collected := 0
 			for _, val := range v.chunks {
-				log.Printf("chunk:%v \n", val)
-				if val.Stored() {
-					chunks[collected] = val.Load()
+				//log.Printf("chunk:%v \n", val)
+				if Verify() {
+					chunks[collected] = val
 					collected += 1
 				}
 				if collected >= v.N-v.F*2 {
 					break
 				}
 			}
-			if collected < v.N-v.F*2 {
-				log.Printf("echos:%v \n", v.echos)
-				log.Printf("chunks:%v \n", v.chunks)
+			if collected < v.F+1 {
+				//log.Printf("chunks:%v \n", v.chunks)
 				panic("insufficient shards")
 			}
 			// decode the dispersed file
@@ -507,7 +505,7 @@ func (v *VID) ReleaseChunk() []Message {
 	}
 	v.canReleaseChunk = true
 	// if we can answer to the requests
-	if v.requestUnanswered != nil && v.ourChunk.Stored() {
+	if v.requestUnanswered != nil && v.ourChunk != nil {
 		for from, t := range v.requestUnanswered {
 			if t {
 				msg := &VIDMessage{}
@@ -515,7 +513,7 @@ func (v *VID) ReleaseChunk() []Message {
 				msg.FromID = v.ID
 				msg.IndexID = v.IndexID
 				msg.DestID = from
-				msg.PayloadChunk = v.ourChunk.Load()
+				msg.PayloadChunk = v.ourChunk
 				msgs = append(msgs, msg)
 			}
 		}

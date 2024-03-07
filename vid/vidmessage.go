@@ -14,7 +14,7 @@ type VIDMessage struct {
 	IndexID      int  // index of vid instance
 	Got          bool // true if this is a Got message
 	Ready        bool // true if this is a Ready message
-	Disperse     bool // true this is a Disperse message; a Disperse message contains the dispersed chunk
+	Disperse     bool // true if this is a Disperse message; a Disperse message contains the dispersed chunk
 	RequestChunk bool // true if this message requests a chunk of the dispersed file
 	RespondChunk bool // true if this message responds with a chunk request; such a message contains a dispersed chunk
 	Cancel       bool
