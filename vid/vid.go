@@ -8,7 +8,8 @@ import (
 	//"encoding/binary"
 	//"encoding/gob"
 	//"bytes"
-	"github.com/QinYuuuu/avid-d/erasurecode"
+
+	. "github.com/QinYuuuu/avid-d/erasurecode"
 	"github.com/QinYuuuu/avid-d/hasher"
 )
 
@@ -48,6 +49,7 @@ type VIDDisperseState struct {
 	echos []bool // the chunks of the broadcasted file that we have received in Echo messages,
 	// or nil if we have not received Echo from that server
 	nEchos    int    // the number of echos that we have received, which should equal the number of non-nil items in echos
+	gots      []bool // the number of gots we have received
 	readys    []bool // if we received ready from that server
 	nReadys   int    // the number of readys we received, which should equal the number of true's in readys
 	sentEcho  bool   // if we have sent out Echo
@@ -60,12 +62,12 @@ type VID struct {
 	*VIDPayloadState
 	*VIDDisperseState
 	*VIDOutput
-	codec erasurecode.ErasureCode // the codec we want to use
+	codec ErasureCode // the codec we want to use
 	ProtocolParams
 }
 
 // NewVID constructs a new VID instance.
-func NewVID(initID int, indexID int, p ProtocolParams, codec erasurecode.ErasureCode) *VID {
+func NewVID(initID int, indexID int, p ProtocolParams, codec ErasureCode) *VID {
 	v := VID{
 		ProtocolParams:   p,
 		IndexID:          indexID,
@@ -75,7 +77,8 @@ func NewVID(initID int, indexID int, p ProtocolParams, codec erasurecode.Erasure
 		codec:            codec,
 	}
 	v.initID = initID
-	v.chunks = make([]StoredErasureCodeChunk, p.N)
+	v.chunks = make([]ErasureCodeChunk, p.N)
+	v.gots = make([]bool, p.N)
 	v.readys = make([]bool, p.N)
 	v.echos = make([]bool, p.N)
 	for i := 0; i < p.N; i++ {
@@ -139,17 +142,14 @@ func (v *VID) Init() ([]Message, Event) {
 
 // handleEcho processes an Echo message with the given source and broadcasted chunk. It panics if the broadcasted chunk is nil.
 // It is a nop if VIDCoreState is nil.
-func (v *VID) handleEcho(from int, c erasurecode.ErasureCodeChunk, ad Checksum) {
+/*
+func (v *VID) handleEcho(from int, c ErasureCodeChunk, ad Checksum) {
 	log.Printf("[node %d] handling Echo from node %d", v.ID, from)
 	if v.VIDDisperseState == nil {
 		log.Printf("[node %d] VIDDisperseState is nil", v.ID)
 		// if the core state is dropped, it means that we no longer need to handle echo
 		return
 	}
-	/*
-		if ad.Size() == 0 {
-			panic("handling echo message with empty Checksum")
-		}*/
 	if c == nil {
 		panic("handling echo message with empty chunk")
 	}
@@ -168,10 +168,10 @@ func (v *VID) handleEcho(from int, c erasurecode.ErasureCodeChunk, ad Checksum) 
 		log.Printf("[node %d] nChunks %d\n", v.ID, v.nChunks)
 	}
 }
-
+*/
 // handleDisperse processes a Disperse message from the given source with the given dispersed and broadcasted chunk. It panics if
 // either chunk is nil. It is a nop if VIDCoreState is nil, or if the source is not the initID of the VID.
-func (v *VID) handleDisperse(from int, c erasurecode.ErasureCodeChunk, checksum Checksum) {
+func (v *VID) handleDisperse(from int, c ErasureCodeChunk, checksum Checksum) {
 	log.Printf("[node %d] handling disperse message from %d\n", v.ID, from)
 	if v.VIDDisperseState == nil {
 		log.Printf("VIDDisperseState is nil \n")
@@ -192,28 +192,32 @@ func (v *VID) handleDisperse(from int, c erasurecode.ErasureCodeChunk, checksum 
 		}*/
 
 	// record the message, and we only take the first message
-	if !v.ourChunk.Stored() {
+	if v.ourChunk == nil {
 		// we need to check VIDPayloadState here, because the initiating node will hear its own Disperse message, and at
 		// that time, the VIDPayloadState may already been marked as nil
 		if v.VIDPayloadState != nil {
-			v.chunks[v.ID].Store(c, v.DBPath)
+			v.chunks[v.ID] = c
 			v.nChunks += 1
 			log.Printf("[node %d] nChunks is %d\n", v.ID, v.nChunks)
 			//fmt.Printf("has stored chunks %v\n", v.chunks)
 		}
-		v.ourChunk.Store(c, v.DBPath)
+		v.ourChunk = c
 		log.Printf("[node %d] has stored its own chunk from node %d", v.ID, from)
 	}
-	if !v.ourEcho.IsStored {
-		// see the comment above for why we need to check for VIDCoreState here
-		if v.VIDDisperseState != nil {
-			v.echos[v.ID] = true
-			v.nEchos += 1
-			log.Printf("[node %d] nEchos is %d\n", v.ID, v.nEchos)
-			//fmt.Printf("stored checksums %v\n", v.echos)
-		}
-		v.ourEcho.Store(checksum)
-		log.Printf("[node %d] has stored its own checksum from node %d", v.ID, from)
+}
+
+// handleGot processes a Got message. If we have received n-t Got, broadcast Ready
+func (v *VID) handleGot(from int) {
+	if v.VIDDisperseState == nil {
+		// if the core state is dropped, it means that we no longer need to handle ready
+		return
+	}
+	if !v.gots[from] {
+		log.Printf("[node %d] receive ready message from node %d\n", v.ID, from)
+
+		v.readys[from] = true
+		v.nReadys += 1
+		log.Printf("[node %d] nReadys is %d\n", v.ID, v.nReadys)
 	}
 }
 
@@ -236,7 +240,7 @@ func (v *VID) handleReady(from int) {
 
 // handleChunkResponse handles a Response message from the given source and dispersed chunk. It is a nop if VIDPayloadState
 // is nil, and panics if the dispersed chunk is nil.
-func (v *VID) handleChunkResponse(from int, c erasurecode.ErasureCodeChunk) {
+func (v *VID) handleChunkResponse(from int, c ErasureCodeChunk) {
 	if v.VIDPayloadState == nil {
 		return
 	}
@@ -265,7 +269,7 @@ func (v *VID) respondRequest(from, ourid int) []Message {
 		msg.IndexID = v.IndexID
 		msg.FromID = ourid
 		msg.DestID = from
-		msg.PayloadChunk = v.ourChunk.Load()
+		msg.PayloadChunk = v.ourChunk
 		msgs = append(msgs, msg)
 	} else {
 		// otherwise buffer the response
@@ -297,26 +301,30 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	if m.IndexID != v.IndexID {
 		log.Panic("wrong vid instance")
 	}
-	//fmt.Printf("message %v %v %v\n", m, m.PayloadChunk, m.Checksum)
 	var msgs []Message
 
 	// handle the message
-	if m.Echo {
-		v.handleEcho(m.FromID, m.PayloadChunk, m.Checksum)
+	/*
+		if m.Echo {
+			v.handleEcho(m.FromID, m.PayloadChunk, m.Checksum)
 
-		// if we have requested the dispersed file, but have not sent the requests, see if we can send
-		// we send requests when we have got N-F Echos
-		if v.payload == nil {
-			if v.payloadScheduled {
-				msg := &VIDMessage{}
-				msg.RequestChunk = true
-				msg.IndexID = v.IndexID
-				msg.DestID = m.FromID
-				msg.FromID = v.ID
-				msgs = append(msgs, msg)
-				v.Printf("requesting chunk from node %v\n", m.FromID)
+			// if we have requested the dispersed file, but have not sent the requests, see if we can send
+			// we send requests when we have got N-F Echos
+			if v.payload == nil {
+				if v.payloadScheduled {
+					msg := &VIDMessage{}
+					msg.RequestChunk = true
+					msg.IndexID = v.IndexID
+					msg.DestID = m.FromID
+					msg.FromID = v.ID
+					msgs = append(msgs, msg)
+					v.Printf("requesting chunk from node %v\n", m.FromID)
+				}
 			}
-		}
+		}*/
+
+	if m.Got {
+		v.handleGot(m.FromID)
 	}
 	if m.Ready {
 		v.handleReady(m.FromID)
@@ -373,7 +381,7 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 				msg.FromID = v.ID
 				msg.IndexID = v.IndexID
 				msg.DestID = i
-				msg.PayloadChunk = v.ourChunk.Load()
+				msg.PayloadChunk = v.ourChunk
 				msg.Checksum = v.ourEcho.Load()
 				msgs = append(msgs, msg)
 			}
@@ -402,7 +410,7 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	if v.VIDPayloadState != nil {
 		if v.payload == nil && v.nChunks > v.N-v.F*2 {
 			// collect the chunks
-			chunks := make([]erasurecode.ErasureCodeChunk, v.N-v.F*2)
+			chunks := make([]ErasureCodeChunk, v.N-v.F*2)
 			collected := 0
 			for _, val := range v.chunks {
 				log.Printf("chunk:%v \n", val)
@@ -420,7 +428,7 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 				panic("insufficient shards")
 			}
 			// decode the dispersed file
-			var espayload erasurecode.Payload
+			var espayload Payload
 			err := v.codec.Decode(chunks, &espayload)
 			if err != nil {
 				panic(err)

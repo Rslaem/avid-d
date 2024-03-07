@@ -6,22 +6,22 @@ import (
 	//"encoding/gob"
 	"fmt"
 
-	"github.com/QinYuuuu/avid-d/erasurecode"
+	. "github.com/QinYuuuu/avid-d/erasurecode"
 )
 
 // VIDMessage is the message emitted and handled by the VID.
 type VIDMessage struct {
 	IndexID      int  // index of vid instance
-	Echo         bool // true if this is an Echo message; an Echo message contains the broadcasted chunk
+	Got          bool // true if this is a Got message
 	Ready        bool // true if this is a Ready message
 	Disperse     bool // true this is a Disperse message; a Disperse message contains the dispersed chunk
 	RequestChunk bool // true if this message requests a chunk of the dispersed file
 	RespondChunk bool // true if this message responds with a chunk request; such a message contains a dispersed chunk
 	Cancel       bool
-	PayloadChunk erasurecode.ErasureCodeChunk // the chunk of the dispersed file
-	Checksum     Checksum                     // the checksum
-	DestID       int                          // destination of the message
-	FromID       int                          // source of the message
+	PayloadChunk ErasureCodeChunk // the chunk of the dispersed file
+	Checksum     Checksum         // the checksum
+	DestID       int              // destination of the message
+	FromID       int              // source of the message
 }
 
 func (m VIDMessage) Index() int {
@@ -53,8 +53,8 @@ func (m VIDMessage) Size() int {
 // String formats the VIDMessage for debug output.
 func (m VIDMessage) String() string {
 	t := ""
-	if m.Echo {
-		t += "Echo"
+	if m.Got {
+		t += "Got"
 	}
 	if m.Ready {
 		t += "Ready"
