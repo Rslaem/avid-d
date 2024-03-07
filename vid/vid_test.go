@@ -3,8 +3,9 @@ package vid_test
 import (
 	"fmt"
 	"testing"
-	. "TMAABE/vid"
-	. "TMAABE/erasurecode"
+
+	. "github.com/QinYuuuu/avid-d/erasurecode"
+	. "github.com/QinYuuuu/avid-d/vid"
 )
 
 func TestInit(t *testing.T) {
@@ -16,7 +17,7 @@ func TestInit(t *testing.T) {
 		ID: 0,
 	}
 	codec := NewReedSolomonCode(N-2*F, N)
-	v := NewVID(0,0, *param, codec)
+	v := NewVID(0, 0, *param, codec)
 	//msgs, _ := v.Init()
-	fmt.Printf("vid=%v\n",*v)
+	fmt.Printf("vid=%v\n", *v)
 }

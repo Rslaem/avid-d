@@ -5,7 +5,8 @@ import (
 	//"encoding/binary"
 	//"encoding/gob"
 	"fmt"
-	"TMAABE/erasurecode"
+
+	"github.com/QinYuuuu/avid-d/erasurecode"
 )
 
 // VIDMessage is the message emitted and handled by the VID.

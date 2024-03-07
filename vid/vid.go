@@ -8,12 +8,9 @@ import (
 	//"encoding/binary"
 	//"encoding/gob"
 	//"bytes"
-	"TMAABE/erasurecode"
-	"TMAABE/hasher"
+	"github.com/QinYuuuu/avid-d/erasurecode"
+	"github.com/QinYuuuu/avid-d/hasher"
 )
-
-// TODO: we should pass the pointer to the on-disk shard in the message, and let the
-// message encoder to retrieve the data.
 
 // VIDPayload is the interface that a payload of the VID protocol should implement.
 type VIDPayload interface{}
@@ -25,13 +22,13 @@ type VIDPayload interface{}
 type VIDOutput struct {
 	payload           VIDPayload // the object being dispersed in the VID, nil if it is not yet retrieved or decoded
 	Checksum          Checksum
-	ourChunk          StoredErasureCodeChunk // the erasure coded chunk of the dispersed file that should be held by us, nil if not received
-	ourEcho           StoredChecksum         // the erasure coded chunk of the broadcasted file that should be held by us, nil if not received
-	requestUnanswered []bool                 // nil if we are answering chunk requests right away; otherwise, true if we have not answered the chunk
+	ourChunk          ErasureCodeChunk // the erasure coded chunk of the dispersed file that should be held by us, nil if not received
+	requestUnanswered []bool           // nil if we are answering chunk requests right away; otherwise, true if we have not answered the chunk
 	// request previously sent by the corresponding node
 	canReleaseChunk bool // if we are allowed to release the payload chunk
 	canceled        bool
 }
+
 /*
 type VIDRetrieve struct {
 	sentRetrieve   bool
@@ -40,15 +37,15 @@ type VIDRetrieve struct {
 */
 // VIDPayloadState is the execution state of the VID that is related to decoding the dispersed file.
 type VIDPayloadState struct {
-	chunks           []StoredErasureCodeChunk // the chunks that we have received, or nil if we have not received the chunk from that server
-	nChunks          int                      // the number of chunks that we have received, which should equal the number of non-nil items in chunks
-	payloadScheduled bool                     // if we want to request chunks
-	sentRequest      bool                     // if we have requested payload chunks
+	chunks           []ErasureCodeChunk // the chunks that we have received, or nil if we have not received the chunk from that server
+	nChunks          int                // the number of chunks that we have received, which should equal the number of non-nil items in chunks
+	payloadScheduled bool               // if we want to request chunks
+	sentRequest      bool               // if we have requested payload chunks
 }
 
 // VIDDisperseState is the core execution state of the VID Disperse.
 type VIDDisperseState struct {
-	echos  []bool // the chunks of the broadcasted file that we have received in Echo messages,
+	echos []bool // the chunks of the broadcasted file that we have received in Echo messages,
 	// or nil if we have not received Echo from that server
 	nEchos    int    // the number of echos that we have received, which should equal the number of non-nil items in echos
 	readys    []bool // if we received ready from that server
@@ -58,7 +55,7 @@ type VIDDisperseState struct {
 }
 
 type VID struct {
-	initID int    // ID of the node which should disperse the file
+	initID  int // ID of the node which should disperse the file
 	IndexID int
 	*VIDPayloadState
 	*VIDDisperseState
@@ -113,11 +110,11 @@ func (v *VID) Init() ([]Message, Event) {
 		panic("error encoding payload " + err.Error())
 	}
 	/*
-	content := make([][]byte, len(pldChunks))
-	for i, c := range pldChunks {
-		log.Printf("[node %d] generate chunks %v", v.ID, c)
-		content[i] = hasher.SHA256Hasher(c.GetData())
-	}*/
+		content := make([][]byte, len(pldChunks))
+		for i, c := range pldChunks {
+			log.Printf("[node %d] generate chunks %v", v.ID, c)
+			content[i] = hasher.SHA256Hasher(c.GetData())
+		}*/
 	checksum := Checksum{
 		Value: [][]byte{hasher.SHA256Hasher([]byte("A"))},
 	}
@@ -150,9 +147,9 @@ func (v *VID) handleEcho(from int, c erasurecode.ErasureCodeChunk, ad Checksum) 
 		return
 	}
 	/*
-	if ad.Size() == 0 {
-		panic("handling echo message with empty Checksum")
-	}*/
+		if ad.Size() == 0 {
+			panic("handling echo message with empty Checksum")
+		}*/
 	if c == nil {
 		panic("handling echo message with empty chunk")
 	}
@@ -190,9 +187,9 @@ func (v *VID) handleDisperse(from int, c erasurecode.ErasureCodeChunk, checksum 
 		panic("handling disperse message with nil payloadChunk")
 	}
 	/*
-	if checksum.Size() == 0 {
-		panic("handling disperse message with empety checksum")
-	}*/
+		if checksum.Size() == 0 {
+			panic("handling disperse message with empety checksum")
+		}*/
 
 	// record the message, and we only take the first message
 	if !v.ourChunk.Stored() {
@@ -297,7 +294,7 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	if !ok {
 		log.Println("interface message convert to VIDMessage failed")
 	}
-	if m.IndexID != v.IndexID{
+	if m.IndexID != v.IndexID {
 		log.Panic("wrong vid instance")
 	}
 	//fmt.Printf("message %v %v %v\n", m, m.PayloadChunk, m.Checksum)
@@ -408,7 +405,7 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 			chunks := make([]erasurecode.ErasureCodeChunk, v.N-v.F*2)
 			collected := 0
 			for _, val := range v.chunks {
-				log.Printf("chunk:%v \n",val)
+				log.Printf("chunk:%v \n", val)
 				if val.Stored() {
 					chunks[collected] = val.Load()
 					collected += 1
@@ -418,8 +415,8 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 				}
 			}
 			if collected < v.N-v.F*2 {
-				log.Printf("echos:%v \n",v.echos)
-				log.Printf("chunks:%v \n",v.chunks)
+				log.Printf("echos:%v \n", v.echos)
+				log.Printf("chunks:%v \n", v.chunks)
 				panic("insufficient shards")
 			}
 			// decode the dispersed file
