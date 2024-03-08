@@ -186,11 +186,9 @@ func (v *VID) handleDisperse(from int, c ErasureCodeChunk, checksum Checksum) {
 	if c == nil {
 		panic("handling disperse message with nil payloadChunk")
 	}
-	/*
-		if checksum.Size() == 0 {
-			panic("handling disperse message with empety checksum")
-		}*/
-
+	if checksum.Size() == 0 {
+		panic("handling disperse message with empety checksum")
+	}
 	// record the message, and we only take the first message
 	if v.ourChunk == nil {
 		// we need to check VIDPayloadState here, because the initiating node will hear its own Disperse message, and at
