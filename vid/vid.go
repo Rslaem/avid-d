@@ -2,7 +2,7 @@ package vid
 
 import (
 	"github.com/QinYuuuu/avid-d/commit/merklecommitment"
-	"TMAABE/hasher"
+	"github.com/QinYuuuu/avid-d/hasher"
 
 	//"encoding/json"
 	"fmt"
