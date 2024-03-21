@@ -1,6 +1,9 @@
 package vid
 
 import (
+	"github.com/QinYuuuu/avid-d/commit/merklecommitment"
+	"TMAABE/hasher"
+
 	//"encoding/json"
 	"fmt"
 	"log"
@@ -8,11 +11,12 @@ import (
 	//"encoding/binary"
 	//"encoding/gob"
 	//"bytes"
-
-	//. "github.com/QinYuuuu/avid-d/commit/merklecommitment"
-	. "github.com/QinYuuuu/avid-d/erasurecode"
-	"github.com/QinYuuuu/avid-d/hasher"
+	"github.com/QinYuuuu/avid-d/erasurecode"
+	escode "github.com/QinYuuuu/avid-d/erasurecode"
 )
+
+// TODO: we should pass the pointer to the on-disk shard in the message, and let the
+// message encoder to retrieve the data.
 
 // VIDPayload is the interface that a payload of the VID protocol should implement.
 type VIDPayload interface{}
@@ -22,39 +26,44 @@ type VIDPayload interface{}
 
 // VIDOutput is the output of a VID instance.
 type VIDOutput struct {
-	payload           VIDPayload // the object being dispersed in the VID, nil if it is not yet retrieved or decoded
-	Checksum          Checksum
-	ourChunk          ErasureCodeChunk // the erasure coded chunk of the dispersed file that should be held by us, nil if not received
-	requestUnanswered []bool           // nil if we are answering chunk requests right away; otherwise, true if we have not answered the chunk
+	payload           VIDPayload              // the object being dispersed in the VID, nil if it is not yet retrieved or decoded
+	ourChunk          escode.ErasureCodeChunk // the erasure coded chunk of the dispersed file that should be held by us, nil if not received
+	ourChecksum       StoredChecksum          // the erasure coded chunk of the broadcasted file that should be held by us, nil if not received
+	requestUnanswered []bool                  // nil if we are answering chunk requests right away; otherwise, true if we have not answered the chunk
 	// request previously sent by the corresponding node
 	canReleaseChunk bool // if we are allowed to release the payload chunk
 	canceled        bool
 }
 
-/*
-type VIDRetrieve struct {
-	sentRetrieve   bool
-	retrieveChunks []StoredErasureCodeChunk // the chunks that we have received, or nil if we have not received the chunk from that server
-}
-*/
 // VIDPayloadState is the execution state of the VID that is related to decoding the dispersed file.
 type VIDPayloadState struct {
-	chunks           []ErasureCodeChunk // the chunks that we have received, or nil if we have not received the chunk from that server
-	nChunks          int                // the number of chunks that we have received, which should equal the number of non-nil items in chunks
-	payloadScheduled bool               // if we want to request chunks
-	sentRequest      bool               // if we have requested payload chunks
+	chunks           []escode.ErasureCodeChunk // the chunks that we have received, or nil if we have not received the chunk from that server
+	nChunks          int                       // the number of chunks that we have received, which should equal the number of non-nil items in chunks
+	payloadScheduled bool                      // if we want to request chunks
+	sentRequest      bool                      // if we have requested payload chunks
 }
 
 // VIDDisperseState is the core execution state of the VID Disperse.
 type VIDDisperseState struct {
-	echos []bool // the chunks of the broadcasted file that we have received in Echo messages,
+	gots []bool // the chunks of the broadcasted file that we have received in Echo messages,
 	// or nil if we have not received Echo from that server
-	nEchos    int    // the number of echos that we have received, which should equal the number of non-nil items in echos
-	gots      []bool // the number of gots we have received
+	nGots     int    // the number of gots that we have received, which should equal the number of non-nil items in gots
 	readys    []bool // if we received ready from that server
 	nReadys   int    // the number of readys we received, which should equal the number of true's in readys
-	sentEcho  bool   // if we have sent out Echo
+	sentGot   bool   // if we have sent out Echo
 	sentReady bool   // if we have sent out Ready
+}
+
+type VIDRetrieveState struct {
+	setRoot       bool                         // if we have set the merkle tree root
+	Root          *merklecommitment.MerkleTree // the root hash
+	proof         *merklecommitment.Witness    // the proof of the chunk with root R
+	rootGot       []bool                       // if we received Root(r) from that server
+	nRootGots     int                          // the number of Root(r) we have received
+	rootReady     []bool                       // if we received Ready(r) from that server
+	nRootReadys   int                          // the number of Ready(r) we have received
+	sentRoot      bool                         // if we have sent out Root(r)
+	sentRootReady bool                         // if we have sent out Ready(r)
 }
 
 type VID struct {
@@ -62,37 +71,53 @@ type VID struct {
 	IndexID int
 	*VIDPayloadState
 	*VIDDisperseState
+	*VIDRetrieveState
 	*VIDOutput
-	codec ErasureCode // the codec we want to use
+	codec erasurecode.ErasureCode // the codec we want to use
 	ProtocolParams
 }
 
 // NewVID constructs a new VID instance.
-func NewVID(initID int, indexID int, p ProtocolParams, codec ErasureCode) *VID {
+func NewVID(initID int, indexID int, p ProtocolParams, codec erasurecode.ErasureCode) *VID {
 	v := VID{
 		ProtocolParams:   p,
 		IndexID:          indexID,
 		VIDDisperseState: &VIDDisperseState{},
+		VIDRetrieveState: &VIDRetrieveState{},
 		VIDPayloadState:  &VIDPayloadState{},
 		VIDOutput:        &VIDOutput{},
 		codec:            codec,
 	}
 	v.initID = initID
-	v.chunks = make([]ErasureCodeChunk, p.N)
-	v.gots = make([]bool, p.N)
+	v.chunks = make([]escode.ErasureCodeChunk, p.N)
 	v.readys = make([]bool, p.N)
-	v.echos = make([]bool, p.N)
+	v.gots = make([]bool, p.N)
+	v.rootGot = make([]bool, p.N)
+	v.rootReady = make([]bool, p.N)
 	for i := 0; i < p.N; i++ {
-		v.echos[i] = false
+		v.gots[i] = false
 		v.readys[i] = false
+		v.rootGot[i] = false
+		v.rootReady[i] = false
 	}
-	v.nEchos = 0
+	v.nGots = 0
 	v.nReadys = 0
+	v.nRootGots = 0
+	v.nRootReadys = 0
+
+	v.ourChunk = nil
 	v.requestUnanswered = make([]bool, p.N)
+
+	v.sentReady = false
+	v.sentGot = false
+	v.sentRoot = false
+	v.sentRootReady = false
 
 	// if we are supposed to disperse, set payload to default to nothing
 	if v.ID == v.initID {
 		v.payload = nil
+		v.Root = nil
+		v.setRoot = false
 	}
 	return &v
 }
@@ -119,9 +144,6 @@ func (v *VID) Init() ([]Message, Event) {
 			log.Printf("[node %d] generate chunks %v", v.ID, c)
 			content[i] = hasher.SHA256Hasher(c.GetData())
 		}*/
-	checksum := Checksum{
-		Value: [][]byte{hasher.SHA256Hasher([]byte("A"))},
-	}
 
 	// send out Disperse and Ready messages
 	// can't do Echo here because both Echo and Disperse use the AssociatedChunk field
@@ -133,7 +155,6 @@ func (v *VID) Init() ([]Message, Event) {
 		msg.FromID = v.ID
 		msg.DestID = i
 		msg.PayloadChunk = pldChunks[i]
-		msg.Checksum = checksum
 		msgs = append(msgs, msg)
 	}
 	v.sentReady = true
@@ -143,36 +164,41 @@ func (v *VID) Init() ([]Message, Event) {
 
 // handleEcho processes an Echo message with the given source and broadcasted chunk. It panics if the broadcasted chunk is nil.
 // It is a nop if VIDCoreState is nil.
-/*
-func (v *VID) handleEcho(from int, c ErasureCodeChunk, ad Checksum) {
-	log.Printf("[node %d] handling Echo from node %d", v.ID, from)
+func (v *VID) handleGot(from int) {
+	log.Printf("[node %d] handling Got from node %d", v.ID, from)
 	if v.VIDDisperseState == nil {
 		log.Printf("[node %d] VIDDisperseState is nil", v.ID)
 		// if the core state is dropped, it means that we no longer need to handle echo
 		return
 	}
-	if c == nil {
-		panic("handling echo message with empty chunk")
-	}
+
 	// record the message, and we only take the first message
-	//fmt.Printf("v.echos %v \n", v.echos)
-	if !v.echos[from] {
-		v.echos[from] = true
-		v.nEchos += 1
-		log.Printf("[node %d] nEchos %d\n", v.ID, v.nEchos)
-	}
-	//fmt.Printf("v.chunks %v \n", v.chunks)
-	if !v.chunks[from].IsStored {
-		v.nChunks += 1
-		v.chunks[from].Store(c, v.DBPath)
-		log.Printf("[node %d] store chunk from %d\n", v.ID, from)
-		log.Printf("[node %d] nChunks %d\n", v.ID, v.nChunks)
+	if !v.gots[from] {
+		v.gots[from] = true
+		v.nGots += 1
+		log.Printf("[node %d] nGots %d\n", v.ID, v.nGots)
 	}
 }
-*/
+
+// handleReady processes a Ready message from the given source. It is a nop if VIDCoreState is nil.
+func (v *VID) handleReady(from int) {
+	if v.VIDDisperseState == nil {
+
+		// if the core state is dropped, it means that we no longer need to handle ready
+		return
+	}
+	// record the message
+	if !v.readys[from] {
+		log.Printf("[node %d] receive ready message from node %d\n", v.ID, from)
+		v.readys[from] = true
+		v.nReadys += 1
+		log.Printf("[node %d] nReadys is %d\n", v.ID, v.nReadys)
+	}
+}
+
 // handleDisperse processes a Disperse message from the given source with the given dispersed and broadcasted chunk. It panics if
 // either chunk is nil. It is a nop if VIDCoreState is nil, or if the source is not the initID of the VID.
-func (v *VID) handleDisperse(from int, c ErasureCodeChunk, checksum Checksum) {
+func (v *VID) handleDisperse(from int, c erasurecode.ErasureCodeChunk, checksum Checksum) {
 	log.Printf("[node %d] handling disperse message from %d\n", v.ID, from)
 	if v.VIDDisperseState == nil {
 		log.Printf("VIDDisperseState is nil \n")
@@ -187,9 +213,11 @@ func (v *VID) handleDisperse(from int, c ErasureCodeChunk, checksum Checksum) {
 	if c == nil {
 		panic("handling disperse message with nil payloadChunk")
 	}
-	if checksum.Size() == 0 {
-		panic("handling disperse message with empety checksum")
-	}
+	/*
+		if checksum.Size() == 0 {
+			panic("handling disperse message with empety checksum")
+		}*/
+
 	// record the message, and we only take the first message
 	if v.ourChunk == nil {
 		// we need to check VIDPayloadState here, because the initiating node will hear its own Disperse message, and at
@@ -203,43 +231,57 @@ func (v *VID) handleDisperse(from int, c ErasureCodeChunk, checksum Checksum) {
 		v.ourChunk = c
 		log.Printf("[node %d] has stored its own chunk from node %d", v.ID, from)
 	}
-}
-
-// handleGot processes a Got message. If we have received n-t Got, broadcast Ready
-func (v *VID) handleGot(from int) {
-	if v.VIDDisperseState == nil {
-		// if the core state is dropped, it means that we no longer need to handle ready
-		return
-	}
-	if !v.gots[from] {
-		log.Printf("[node %d] receive ready message from node %d\n", v.ID, from)
-
-		v.readys[from] = true
-		v.nReadys += 1
-		log.Printf("[node %d] nReadys is %d\n", v.ID, v.nReadys)
+	if !v.ourChecksum.IsStored {
+		// see the comment above for why we need to check for VIDCoreState here
+		if v.VIDDisperseState != nil {
+			v.gots[v.ID] = true
+			v.nGots += 1
+			log.Printf("[node %d] nGots is %d\n", v.ID, v.nGots)
+			//fmt.Printf("stored checksums %v\n", v.gots)
+		}
+		v.ourChecksum.Store(checksum)
+		v.proof = checksum.Value
+		log.Printf("[node %d] has stored its own checksum from node %d", v.ID, from)
 	}
 }
 
-// handleReady processes a Ready message from the given source. It is a nop if VIDCoreState is nil.
-func (v *VID) handleReady(from int) {
-	if v.VIDDisperseState == nil {
-
-		// if the core state is dropped, it means that we no longer need to handle ready
+func (v *VID) handleRootReady(from int) {
+	if v.VIDRetrieveState == nil {
 		return
 	}
-	// record the message
-	if !v.readys[from] {
-		log.Printf("[node %d] receive ready message from node %d\n", v.ID, from)
 
-		v.readys[from] = true
-		v.nReadys += 1
-		log.Printf("[node %d] nReadys is %d\n", v.ID, v.nReadys)
+	if !v.rootReady[from] {
+		log.Printf("[node %d] receive Ready(r) from node %d\n", v.ID, from)
+		v.rootReady[from] = true
+		v.nRootReadys += 1
+		log.Printf("[node %d] nReadys is %d\n", v.ID, v.nRootReadys)
+
 	}
+}
+
+func (v *VID) handleRoot(from int) {
+	log.Printf("[node %d] handling Root(r) from node %d", v.ID, from)
+	if v.VIDRetrieveState == nil {
+		log.Printf("[node %d] VIDTrieveState is nil", v.ID)
+		// if the core state is dropped, it means that we no longer need to handle echo
+		return
+	}
+	//if c == nil {
+	//	panic("handling echo message with empty chunk")
+	//}
+
+	if !v.rootGot[from] {
+		v.rootGot[from] = true
+		v.nRootGots += 1
+		log.Printf("[node %d] nGots %d\n", v.ID, v.nGots)
+	}
+	//fmt.Printf("v.chunks %v \n", v.chunks)
+
 }
 
 // handleChunkResponse handles a Response message from the given source and dispersed chunk. It is a nop if VIDPayloadState
 // is nil, and panics if the dispersed chunk is nil.
-func (v *VID) handleChunkResponse(from int, c ErasureCodeChunk) {
+func (v *VID) handleChunkResponse(from int, c erasurecode.ErasureCodeChunk, witness Checksum) {
 	if v.VIDPayloadState == nil {
 		return
 	}
@@ -248,9 +290,13 @@ func (v *VID) handleChunkResponse(from int, c ErasureCodeChunk) {
 	}
 
 	// record the chunk and we only take the first message
-	if v.chunks[from] == nil {
+	// TODO: check the merkle proof ...
+	judge, _ := merklecommitment.Verify(v.Root.Root().Hash(), witness.Value, c.GetData(), hasher.SHA256Hasher)
+	if !(v.chunks[from] != nil) && judge {
 		v.nChunks += 1
 		v.chunks[from] = c
+		log.Printf("[node %d] store chunk from %d\n", v.ID, from)
+		log.Printf("[node %d] nChunks %d\n", v.ID, v.nChunks)
 	}
 	v.Printf("receiving chunk from node %v\n", from)
 }
@@ -262,13 +308,14 @@ func (v *VID) respondRequest(from, ourid int) []Message {
 	var msgs []Message
 	log.Printf("[node %d] handling request from node %d", v.ID, from)
 	// if we can respond to chunk requests
-	if v.canReleaseChunk && v.ourChunk != nil {
+	if v.canReleaseChunk && v.ourChunk != nil && !v.setRoot {
 		msg := &VIDMessage{}
 		msg.RespondChunk = true
 		msg.IndexID = v.IndexID
 		msg.FromID = ourid
 		msg.DestID = from
 		msg.PayloadChunk = v.ourChunk
+		msg.Checksum = Checksum{v.ourChecksum.Value, v.ourChecksum.Root}
 		msgs = append(msgs, msg)
 	} else {
 		// otherwise buffer the response
@@ -300,30 +347,26 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	if m.IndexID != v.IndexID {
 		log.Panic("wrong vid instance")
 	}
+	//fmt.Printf("message %v %v %v\n", m, m.PayloadChunk, m.Checksum)
 	var msgs []Message
 
 	// handle the message
-	/*
-		if m.Echo {
-			v.handleEcho(m.FromID, m.PayloadChunk, m.Checksum)
-
-			// if we have requested the dispersed file, but have not sent the requests, see if we can send
-			// we send requests when we have got N-F Echos
-			if v.payload == nil {
-				if v.payloadScheduled {
-					msg := &VIDMessage{}
-					msg.RequestChunk = true
-					msg.IndexID = v.IndexID
-					msg.DestID = m.FromID
-					msg.FromID = v.ID
-					msgs = append(msgs, msg)
-					v.Printf("requesting chunk from node %v\n", m.FromID)
-				}
-			}
-		}*/
-
 	if m.Got {
 		v.handleGot(m.FromID)
+
+		// if we have requested the dispersed file, but have not sent the requests, see if we can send
+		// we send requests when we have got N-F gots
+		/*if v.payload == nil {
+			if v.payloadScheduled {
+				msg := &VIDMessage{}
+				msg.RequestChunk = true
+				msg.IndexID = v.IndexID
+				msg.DestID = m.FromID
+				msg.FromID = v.ID
+				msgs = append(msgs, msg)
+				v.Printf("requesting chunk from node %v\n", m.FromID)
+			}
+		}*/
 	}
 	if m.Ready {
 		v.handleReady(m.FromID)
@@ -331,31 +374,48 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	if m.Disperse {
 		v.handleDisperse(m.FromID, m.PayloadChunk, m.Checksum)
 	}
+	if m.RootGot {
+		v.handleRoot(m.FromID)
+	}
+	if m.RootReady {
+		v.handleRootReady(m.FromID)
+	}
+	if m.RespondChunk && !m.RootGotPerp && m.ToInvoker {
+		v.handleChunkResponse(m.FromID, m.PayloadChunk, m.Checksum)
+		if v.payload == nil {
+			if v.payloadScheduled {
+				msg := &VIDMessage{}
+				msg.RequestChunk = true
+				msg.IndexID = v.IndexID
+				msg.DestID = m.FromID
+				msg.FromID = v.ID
+				msgs = append(msgs, msg)
+				v.Printf("requesting chunk from node %v\n", m.FromID)
+			}
+		}
 
-	if m.RespondChunk {
-		v.handleChunkResponse(m.FromID, m.PayloadChunk)
 	}
 	if m.RequestChunk {
 		msgs = append(msgs, v.respondRequest(m.FromID, v.ID)...)
 		return msgs, 0
 	}
+
 	// from now on, the message is not used anymore
 
 	// logics that happens when we are not terminated
 	if v.VIDDisperseState != nil {
-		// if we have received 2F+1 Echos, send out Ready
-		if v.nEchos >= (2*v.F+1) && !v.sentReady {
+		// if we have received 2F+1 gots, send out Ready
+		if v.nGots >= (2*v.F+1) && !v.sentReady {
 			for i := 0; i < v.N; i++ {
 				msg := &VIDMessage{}
 				msg.Ready = true
 				msg.IndexID = v.IndexID
 				msg.FromID = v.ID
 				msg.DestID = i
-
 				msgs = append(msgs, msg)
 			}
 			v.sentReady = true
-			v.Println("sending out Ready due to enough Echos")
+			v.Println("sending out Ready due to enough gots")
 		}
 
 		// if we have received F+1 Readys, send out Ready (if we have not done so)
@@ -373,18 +433,19 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 		}
 
 		// if we have got our chunks, send out Echo
-		if !v.sentEcho && v.ourChunk != nil {
-			for i := 0; i < v.N; i++ {
-				msg := &VIDMessage{}
-				msg.Got = true
-				msg.FromID = v.ID
-				msg.IndexID = v.IndexID
-				msg.DestID = i
-				msgs = append(msgs, msg)
-			}
-			v.sentEcho = true
-			v.Printf("[node %d] sending out Echos", v.ID)
-		}
+		/*
+			if !v.sentGot && v.ourChunk != nil && v.ourChecksum.Stored() {
+				for i := 0; i < v.N; i++ {
+					msg := &VIDMessage{}
+					msg.Got = true
+					msg.FromID = v.ID
+					msg.IndexID = v.IndexID
+					msg.DestID = i
+					msgs = append(msgs, msg)
+				}
+				v.sentGot = true
+				v.Printf("[node %d] sending out gots", v.ID)
+			}*/
 	}
 
 	/*	// if we can answer chunk requests, answer the recorded ones now
@@ -403,15 +464,85 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 			v.requestUnanswered = nil
 		}
 	*/
-	// if we have got F+1 chunks, decode the dispersed file
-	if v.VIDPayloadState != nil {
-		if v.payload == nil && v.nChunks > v.F+1 {
+
+	if v.VIDRetrieveState != nil {
+		// TODO:check our proof
+		judge, _ := merklecommitment.Verify(v.Root.Root().Hash(), v.proof, v.ourChunk.GetData(), hasher.SHA256Hasher)
+		if !v.setRoot && judge == true {
+			if !v.sentRoot {
+				for i := 0; i < v.N; i++ {
+					msg := &VIDMessage{}
+					msg.RootGot = true
+					msg.IndexID = v.IndexID
+					msg.FromID = v.ID
+					msg.DestID = i
+					msg.PayloadChunk = v.ourChunk
+					msg.Checksum = v.ourChecksum.Load()
+					msgs = append(msgs, msg)
+				}
+			} else {
+				//向invoker发送元组消息
+				msg := &VIDMessage{}
+				msg.ToInvoker = true
+				msg.IndexID = v.IndexID
+				msg.FromID = v.ID
+				msg.DestID = v.ID
+				msg.PayloadChunk = v.ourChunk
+				msg.Checksum = v.ourChecksum.Load()
+				msgs = append(msgs, msg)
+			}
+		} else {
+			for i := 0; i < v.N; i++ {
+				msg := &VIDMessage{}
+				msg.RootGotPerp = true
+				msg.IndexID = v.IndexID
+				msg.FromID = v.ID
+				msg.DestID = i
+				//msg.PayloadChunk = v.ourChunk.Load()
+				//msg.Checksum = v.ourEcho.Load()
+				msgs = append(msgs, msg)
+			}
+		}
+
+		if v.nRootGots >= (2*v.F+1) && !v.sentRootReady {
+			for i := 0; i < v.N; i++ {
+				msg := &VIDMessage{}
+				msg.RootReady = true
+				msg.IndexID = v.IndexID
+				msg.FromID = v.ID
+				msg.DestID = i
+				msgs = append(msgs, msg)
+			}
+			v.sentReady = true
+			v.Println("sending out Root due to enough ")
+		}
+
+		if v.nRootReadys >= (v.F+1) && !v.sentRootReady {
+			for i := 0; i < v.N; i++ {
+				msg := &VIDMessage{}
+				msg.RootReady = true
+				msg.FromID = v.ID
+				msg.IndexID = v.IndexID
+				msg.DestID = i
+				msgs = append(msgs, msg)
+			}
+			v.sentReady = true
+			v.Println("sending out Ready due to enough RootReadys")
+		}
+		if v.nRootReadys >= 2*v.F+1 {
+			v.setRoot = true
+		}
+	}
+
+	// if we have got N-2F chunks, decode the dispersed file
+	if v.VIDRetrieveState != nil {
+		if v.payload == nil && v.nChunks > v.N-v.F*2 {
 			// collect the chunks
-			chunks := make([]ErasureCodeChunk, v.F+1)
+			chunks := make([]erasurecode.ErasureCodeChunk, v.N-v.F*2)
 			collected := 0
 			for _, val := range v.chunks {
-				//log.Printf("chunk:%v \n", val)
-				if Verify() {
+				log.Printf("chunk:%v \n", val)
+				if val != nil {
 					chunks[collected] = val
 					collected += 1
 				}
@@ -419,12 +550,13 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 					break
 				}
 			}
-			if collected < v.F+1 {
-				//log.Printf("chunks:%v \n", v.chunks)
+			if collected < v.N-v.F*2 {
+				log.Printf("gots:%v \n", v.gots)
+				log.Printf("chunks:%v \n", v.chunks)
 				panic("insufficient shards")
 			}
 			// decode the dispersed file
-			var espayload Payload
+			var espayload erasurecode.Payload
 			err := v.codec.Decode(chunks, &espayload)
 			if err != nil {
 				panic(err)
@@ -447,11 +579,11 @@ func (v *VID) Recv(mg Message) ([]Message, Event) {
 	}
 
 	// See if we can remove the Disperse state. We can do it when the dispersed file have been requested (we need
-	// the core state to know who have sent us Echos, so that we know who to request chunks from), and after
+	// the core state to know who have sent us gots, so that we know who to request chunks from), and after
 	// the protocol is terminated.
 	// TODO: currently, we are removing it only after decoding the payload
 	if (v.VIDPayloadState == nil) && v.Terminated() {
-		// BUG(leiy): We are not deleting the echos (StoredErasureCodeChunk)
+		// BUG(leiy): We are not deleting the gots (StoredErasureCodeChunk)
 		// on the disk
 		v.VIDDisperseState = nil
 	}
@@ -522,7 +654,7 @@ func (v *VID) ReleaseChunk() []Message {
 }
 
 // RequestPayload schedules the VID to request the dispersed file, and returns a slice of messages to be sent. If more than N-F
-// nodes have sent us Echo, it sends out these requests right away. Otherwise, the request will be sent upon receiving N-F Echos.
+// nodes have sent us Echo, it sends out these requests right away. Otherwise, the request will be sent upon receiving N-F gots.
 // It is a nop if VIDPayloadState is nil, or if we have requested the dispersed file before.
 func (v *VID) RequestPayload() []Message {
 	log.Printf("[node %d] generate retrieve request", v.ID)

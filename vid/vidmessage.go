@@ -1,27 +1,31 @@
 package vid
 
 import (
+	"github.com/QinYuuuu/avid-d/erasurecode"
 	//"bytes"
 	//"encoding/binary"
 	//"encoding/gob"
 	"fmt"
-
-	. "github.com/QinYuuuu/avid-d/erasurecode"
 )
 
 // VIDMessage is the message emitted and handled by the VID.
 type VIDMessage struct {
 	IndexID      int  // index of vid instance
-	Got          bool // true if this is a Got message
+	Got          bool // true if this is an Echo message; an Echo message contains the broadcasted chunk
 	Ready        bool // true if this is a Ready message
-	Disperse     bool // true if this is a Disperse message; a Disperse message contains the dispersed chunk
+	Disperse     bool // true this is a Disperse message; a Disperse message contains the dispersed chunk
 	RequestChunk bool // true if this message requests a chunk of the dispersed file
+	RootGot      bool // true if this is a RootGot message
+	RootGotPerp  bool
+	RootReady    bool // true if this is a RootReady message
+	ToInvoker    bool // true if this is a (root,chunk,proof) message
+
 	RespondChunk bool // true if this message responds with a chunk request; such a message contains a dispersed chunk
 	Cancel       bool
-	PayloadChunk ErasureCodeChunk // the chunk of the dispersed file
-	Checksum     Checksum         // the checksum
-	DestID       int              // destination of the message
-	FromID       int              // source of the message
+	PayloadChunk erasurecode.ErasureCodeChunk // the chunk of the dispersed file
+	Checksum     Checksum                     // the checksum
+	DestID       int                          // destination of the message
+	FromID       int                          // source of the message
 }
 
 func (m VIDMessage) Index() int {
@@ -61,6 +65,15 @@ func (m VIDMessage) String() string {
 	}
 	if m.Disperse {
 		t += "Disperse"
+	}
+	if m.RootGot {
+		t += "RootGot"
+	}
+	if m.RootReady {
+		t += "RootReady"
+	}
+	if m.ToInvoker {
+		t += "ToInvoker"
 	}
 	if m.Cancel {
 		t += "Cancel"
