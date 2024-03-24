@@ -24,6 +24,7 @@ func (checksum *Checksum) Size() int {
 func (checksum *StoredChecksum) Store(c Checksum) {
 	checksum.Value = c.Value
 	checksum.IsStored = true
+	checksum.Root = c.Root
 }
 
 func (checksum *StoredChecksum) Load() Checksum {
