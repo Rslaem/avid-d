@@ -11,10 +11,10 @@ import (
 )
 
 type nodeP struct { //(ri,Mi,Pri),i
-	RootHash []byte   `json:"rootHash"`
-	Content  []byte   `json:"content"` //not hash but the original data
-	Proof    *Witness `json:"proof"`
-	Index    int      `json:"index"`
+	RootHash []byte  `json:"rootHash"`
+	Content  []byte  `json:"content"` //not hash but the original data
+	Proof    Witness `json:"proof"`
+	Index    int     `json:"index"`
 }
 
 func GenerateKey() *rsa.PrivateKey {
