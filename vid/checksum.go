@@ -3,12 +3,12 @@ package vid
 import "github.com/QinYuuuu/avid-d/commit/merklecommitment"
 
 type Checksum struct {
-	Value *merklecommitment.Witness
+	Value merklecommitment.Witness
 	Root  *merklecommitment.MerkleTree
 }
 
 type StoredChecksum struct {
-	Value    *merklecommitment.Witness
+	Value    merklecommitment.Witness
 	Root     *merklecommitment.MerkleTree
 	IsStored bool
 }

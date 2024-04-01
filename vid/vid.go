@@ -1,9 +1,10 @@
 package vid
 
 import (
+	"encoding/json"
+
 	"github.com/QinYuuuu/avid-d/commit/merklecommitment"
 	"github.com/QinYuuuu/avid-d/hasher"
-	"encoding/json"
 
 	//"encoding/json"
 	"fmt"
@@ -59,7 +60,7 @@ type VIDRetrieveState struct {
 	flag          bool
 	setRoot       bool                         // if we have set the merkle tree root
 	Root          *merklecommitment.MerkleTree // the root hash
-	proof         *merklecommitment.Witness    // the proof of the chunk with root R
+	proof         merklecommitment.Witness     // the proof of the chunk with root R
 	rootGot       []bool                       // if we received Root(r) from that server
 	nRootGots     int                          // the number of Root(r) we have received
 	rootReady     []bool                       // if we received Ready(r) from that server
@@ -166,7 +167,7 @@ func (v *VID) Init() ([]Message, Event) {
 	if err != nil {
 		log.Fatalf("Failed to create Merkle tree: %v", err)
 	}
-	var witnesses []*merklecommitment.Witness
+	var witnesses []merklecommitment.Witness
 	for i := 0; i < len(data); i++ {
 		witness, err := merklecommitment.CreateWitness(mt, i)
 		if err != nil {
