@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestSR(T *testing.T) {
-	network.TestTCPNodeCommunication(T)
+func TestSR(t *testing.T) {
+	network.TestTCPNodeCommunication(t)
 }
 
-func TestConn(T *testing.T) {
-	network.TestTCPNode_Concurrency(T)
+func TestConn(t *testing.T) {
+	network.TestTCPNode_Concurrency(t)
 }

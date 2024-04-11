@@ -57,7 +57,7 @@ func (c *TCPClient) SendMessage(msg JsonMessage) error {
 
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		log.Fatalf("序列化JsonMessage时出错: %v", err)
+		log.Fatalf("Error while serializing JsonMessage: %v", err)
 	}
 	msgBytes = append(msgBytes, '\n')
 	_, err = c.conn.Write(msgBytes)

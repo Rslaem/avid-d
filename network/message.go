@@ -33,7 +33,7 @@ func (jm JsonMessage) Dest() int {
 
 	if err := json.Unmarshal(jm.Content, &contentData); err != nil {
 		log.Printf("Failed to unmarshal content: %v", err)
-		return -1
+		return -1 // -1 : nil
 	}
 	return contentData.Dest
 }
@@ -42,7 +42,7 @@ func (jm JsonMessage) From() int {
 	var contentData ContentData
 	if err := json.Unmarshal(jm.Content, &contentData); err != nil {
 		log.Printf("Failed to unmarshal content: %v", err)
-		return -1
+		return -1 // -1 : nil
 	}
 	return contentData.From
 }

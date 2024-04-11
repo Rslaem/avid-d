@@ -15,6 +15,7 @@ func NewTCPServer(address string) *TCPServer {
 	return &TCPServer{Address: address}
 }
 
+// Listening the messages
 func (server *TCPServer) Listen(handleMessage func(JsonMessage)) {
 	listener, err := net.Listen("tcp", server.Address)
 	if err != nil {
