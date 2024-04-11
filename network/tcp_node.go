@@ -97,7 +97,7 @@ func TestTCPNodeCommunication(t *testing.T) {
 		go node.Start()
 	}
 
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// send message
 	var wg sync.WaitGroup
@@ -140,7 +140,7 @@ func TestTCPNode_Concurrency(t *testing.T) {
 		go node.Start()
 	}
 
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// set connection
 	for senderID, node := range nodes {
@@ -154,7 +154,7 @@ func TestTCPNode_Concurrency(t *testing.T) {
 		}
 	}
 
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// send message
 	var wg sync.WaitGroup
