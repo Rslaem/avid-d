@@ -1,7 +1,7 @@
 package network_test
 
 import (
-	"TMAABE/network"
+	"github.com/QinYuuuu/avid-d/network"
 	"testing"
 )
 
