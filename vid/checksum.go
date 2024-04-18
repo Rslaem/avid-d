@@ -3,12 +3,12 @@ package vid
 import "github.com/QinYuuuu/avid-d/commit/merklecommitment"
 
 type Checksum struct {
-	Value *merklecommitment.Witness
+	Value merklecommitment.Witness
 	Root  *merklecommitment.MerkleTree
 }
 
 type StoredChecksum struct {
-	Value    *merklecommitment.Witness
+	Value    merklecommitment.Witness
 	Root     *merklecommitment.MerkleTree
 	IsStored bool
 }
@@ -24,6 +24,7 @@ func (checksum *Checksum) Size() int {
 func (checksum *StoredChecksum) Store(c Checksum) {
 	checksum.Value = c.Value
 	checksum.IsStored = true
+	checksum.Root = c.Root
 }
 
 func (checksum *StoredChecksum) Load() Checksum {

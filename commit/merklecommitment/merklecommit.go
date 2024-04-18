@@ -19,10 +19,10 @@ func (w *Witness) SetHash(hash [][]byte) {
 func (w *Witness) SetPos(left []bool) {
 	w.Left = left
 }
-func (w *Witness) Hash() [][]byte {
+func (w Witness) Hash() [][]byte {
 	return w.HashF
 }
-func (w *Witness) Pos() []bool { //true if
+func (w Witness) Pos() []bool { //true if
 	return w.Left
 }
 
@@ -40,7 +40,7 @@ func Commit(m *MerkleTree) []byte {
 	return m.root.Hash()
 }
 
-func CreateWitness(m *MerkleTree, index int) (*Witness, error) {
+func CreateWitness(m *MerkleTree, index int) (Witness, error) {
 	witnesshash := make([][]byte, 0)
 	witnesspos := make([]bool, 0)
 	n := m.leafs[index]
@@ -54,14 +54,14 @@ func CreateWitness(m *MerkleTree, index int) (*Witness, error) {
 		}
 		n = n.Parent
 	}
-	witness := &Witness{
+	witness := Witness{
 		HashF: witnesshash,
 		Left:  witnesspos,
 	}
 	return witness, nil
 }
 
-func Verify(comm []byte, w *Witness, content []byte, hasher func([]byte) []byte) (bool, error) {
+func Verify(comm []byte, w Witness, content []byte, hasher func([]byte) []byte) (bool, error) {
 	var contenthash []byte
 	if len(w.HashF) != len(w.Left) {
 		return false, errors.New("error: witness has wrong length")

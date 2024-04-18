@@ -7,10 +7,6 @@ import (
 	"github.com/QinYuuuu/avid-d/hasher"
 )
 
-/*type Witness struct {
-	hash [][]byte
-	left []bool
-}*/
 // Path: commit/z.go
 func TestZGenerate(t *testing.T) {
 	// generate

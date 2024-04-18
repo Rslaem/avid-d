@@ -18,7 +18,7 @@ type VIDMessage struct {
 	RootGot      bool // true if this is a RootGot message
 	RootGotPerp  bool
 	RootReady    bool // true if this is a RootReady message
-	ToInvoker    bool // true if this is a (root,chunk,proof) message
+	ToInvoker    int  // the number of invoker with a (root,chunk,proof) message
 
 	RespondChunk bool // true if this message responds with a chunk request; such a message contains a dispersed chunk
 	Cancel       bool
@@ -71,9 +71,6 @@ func (m VIDMessage) String() string {
 	}
 	if m.RootReady {
 		t += "RootReady"
-	}
-	if m.ToInvoker {
-		t += "ToInvoker"
 	}
 	if m.Cancel {
 		t += "Cancel"
