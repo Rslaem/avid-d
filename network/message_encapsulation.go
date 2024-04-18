@@ -3,33 +3,38 @@ package network
 import (
 	"log"
 
-	"github.com/QinYuuuu/avid-d/protobuf"
+	"TMAABE/protobuf"
+
 	"google.golang.org/protobuf/proto"
 )
 
-func Encapsulation(messageType string, ID []byte, sender uint32, payloadMessage any) *protobuf.Message {
+func Encapsulation(messageType string, id []byte, sender uint32, payloadMessage any) *protobuf.Message {
 	var data []byte
 	var err error
 	switch messageType {
 	case "Z":
-		data, err = proto.Marshal(&protobuf.Message.(*protobuf.Z))
+		data, err = proto.Marshal((payloadMessage).(*protobuf.Z))
 	}
 	if err != nil {
 		log.Fatalf("Failed to marshal message: %v", err)
 	}
 	return &protobuf.Message{
-		MessageType: MessageType,
-		Id:          Id,
-		Sender:      Sender,
-		Data:        Data,
+		Type:   messageType,
+		Id:     id,
+		Sender: sender,
+		Data:   data,
 	}
 }
-func Decapsulation(message *protobuf.Message) any {
-	var payloadMessage any
-	switch message.MessageType {
+func Decapsulation(messageType string, message *protobuf.Message) any {
+	//var payloadMessage any
+	switch messageType {
 	case "Z":
-		payloadMessage = &protobuf.Z{}
-		proto.Unmarshal(message.Data, payloadMessage.(*protobuf.Z))
+		var payloadMessage protobuf.Z
+		proto.Unmarshal(message.Data, &payloadMessage)
+		return &payloadMessage
+	default:
+		var payloadMessage protobuf.Message
+		proto.Unmarshal(message.Data, &payloadMessage)
+		return &payloadMessage
 	}
-	return payloadMessage
 }
