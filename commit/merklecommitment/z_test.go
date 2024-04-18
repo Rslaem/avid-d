@@ -3,7 +3,7 @@ package merklecommitment
 import (
 	"encoding/json"
 	"testing"
-
+	"github.com/QinYuuuu/avid-d/network"
 	"github.com/QinYuuuu/avid-d/hasher"
 )
 

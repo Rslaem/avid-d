@@ -6,8 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-
 	"github.com/QinYuuuu/avid-d/hasher"
+	"github.com/QinYuuuu/avid-d/network"
 )
 
 type nodeP struct { //(ri,Mi,Pri),i
@@ -16,7 +16,11 @@ type nodeP struct { //(ri,Mi,Pri),i
 	Proof    *Witness `json:"proof"`
 	Index    int      `json:"index"`
 }
-
+type message struct {
+	MessageType string
+	ID byte[]
+	
+}
 func GenerateKey() *rsa.PrivateKey {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096) //larger if encryption is needed
 	if err != nil {
@@ -26,7 +30,7 @@ func GenerateKey() *rsa.PrivateKey {
 	return privateKey
 }
 func Zgenerate(p *nodeP, publicKey *rsa.PublicKey) []byte {
-	data, _ := json.Marshal(p)
+	data, _ := 
 	//fmt.Println("Data:", data)
 	z := encrypt(data, publicKey)
 	return z
