@@ -1,10 +1,13 @@
 package network
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type TCPClient struct {
@@ -61,6 +64,31 @@ func (c *TCPClient) SendMessage(msg JsonMessage) error {
 	}
 	msgBytes = append(msgBytes, '\n')
 	_, err = c.conn.Write(msgBytes)
+	if err != nil {
+		return fmt.Errorf("failed to send message: %v", err)
+	}
+	return nil
+}
+
+// sendMessage to server
+func (c *TCPClient) SendRpcMessage(msg *RpcMessage) error {
+	if c.conn == nil {
+		if err := c.Connect(); err != nil {
+			return err
+		}
+	}
+
+	msgBytes, err := proto.Marshal(msg)
+	if err != nil {
+		log.Fatalf("Error while serializing RpcMessage: %v", err)
+	}
+
+	var lenPrefix = make([]byte, 4)
+	binary.BigEndian.PutUint32(lenPrefix, uint32(len(msgBytes)))
+
+	// 将长度前缀和消息本体一起写入连接
+	fullMessage := append(lenPrefix, msgBytes...)
+	_, err = c.conn.Write(fullMessage)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}
