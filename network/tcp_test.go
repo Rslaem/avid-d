@@ -12,3 +12,7 @@ func TestSR(t *testing.T) {
 func TestConn(t *testing.T) {
 	network.TestTCPNode_Concurrency(t)
 }
+
+func TestRpc(t *testing.T) {
+	network.TestRPCNodeCommunication(t)
+}
