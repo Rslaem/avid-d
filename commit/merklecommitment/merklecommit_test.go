@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/QinYuuuu/avid-d/hasher"
+	. "TMAABE/commit/merklecommitment"
 
-	. "github.com/QinYuuuu/avid-d/commit/merklecommitment"
+	"TMAABE/hasher"
 )
 
 func TestNewMerkleTree(t *testing.T) {

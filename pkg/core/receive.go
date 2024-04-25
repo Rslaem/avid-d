@@ -6,18 +6,20 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 )
 
 // MakeReceiveChannel returns a channel receiving messages
-func MakeReceiveChannel(port string) chan *protobuf.Message {
+func MakeReceiveChannel(address string) chan *protobuf.Message {
 	var addr *net.TCPAddr
 	var lis *net.TCPListener
 	var err1, err2 error
 	retry := true
 	//Retry to make listener
 	for retry {
+		port := strings.Split(address, ":")[1]
 		addr, err1 = net.ResolveTCPAddr("tcp4", ":"+port)
 		lis, err2 = net.ListenTCP("tcp4", addr)
 		if err1 != nil || err2 != nil {

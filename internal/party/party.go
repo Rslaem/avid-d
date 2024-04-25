@@ -22,8 +22,7 @@ type HonestParty struct {
 	N                 uint32
 	F                 uint32
 	PID               uint32
-	ipList            []string
-	portList          []string
+	addressList       []string
 	sendChannels      []chan *protobuf.Message
 	dispatcheChannels *sync.Map
 
@@ -36,13 +35,12 @@ type HonestParty struct {
 }
 
 // NewHonestParty return a new honest party object
-func NewHonestParty(N uint32, F uint32, pid uint32, ipList []string, portList []string, sigPK *share.PubPoly, sigSK *share.PriShare, encPK kyber.Point, encVK []*share.PubShare, encSK *share.PriShare) *HonestParty {
+func NewHonestParty(N uint32, F uint32, pid uint32, addressList []string, sigPK *share.PubPoly, sigSK *share.PriShare, encPK kyber.Point, encVK []*share.PubShare, encSK *share.PriShare) *HonestParty {
 	p := HonestParty{
 		N:            N,
 		F:            F,
 		PID:          pid,
-		ipList:       ipList,
-		portList:     portList,
+		addressList:  addressList,
 		sendChannels: make([]chan *protobuf.Message, N),
 
 		SigPK: sigPK,
@@ -58,14 +56,14 @@ func NewHonestParty(N uint32, F uint32, pid uint32, ipList []string, portList []
 
 // InitReceiveChannel setup the listener and Init the receiveChannel
 func (p *HonestParty) InitReceiveChannel() error {
-	p.dispatcheChannels = core.MakeDispatcheChannels(core.MakeReceiveChannel(p.portList[p.PID]), p.N)
+	p.dispatcheChannels = core.MakeDispatcheChannels(core.MakeReceiveChannel(p.addressList[p.PID]), p.N)
 	return nil
 }
 
 // InitSendChannel setup the sender and Init the sendChannel, please run this after initializing all party's receiveChannel
 func (p *HonestParty) InitSendChannel() error {
 	for i := uint32(0); i < p.N; i++ {
-		p.sendChannels[i] = core.MakeSendChannel(p.ipList[i], p.portList[i])
+		p.sendChannels[i] = core.MakeSendChannel(p.addressList[i])
 	}
 	return nil
 }

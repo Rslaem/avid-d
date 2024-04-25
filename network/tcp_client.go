@@ -12,7 +12,7 @@ import (
 
 type TCPClient struct {
 	ServerAddress string
-	conn          net.Conn
+	Conn          net.Conn
 	isConnected   bool
 }
 
@@ -28,7 +28,7 @@ func (c *TCPClient) IsConnected() bool {
 // create a connection
 func (c *TCPClient) Connect() error {
 	var err error
-	c.conn, err = net.Dial("tcp", c.ServerAddress)
+	c.Conn, err = net.Dial("tcp", c.ServerAddress)
 	if err != nil {
 		return fmt.Errorf("failed to connect to server at %s: %v", c.ServerAddress, err)
 	}
@@ -38,8 +38,8 @@ func (c *TCPClient) Connect() error {
 
 // close the connection
 func (c *TCPClient) Close() error {
-	if c.conn != nil {
-		err := c.conn.Close()
+	if c.Conn != nil {
+		err := c.Conn.Close()
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (c *TCPClient) Close() error {
 // sendMessage to server
 func (c *TCPClient) SendMessage(msg JsonMessage) error {
 
-	if c.conn == nil {
+	if c.Conn == nil {
 		if err := c.Connect(); err != nil {
 			return err
 		}
@@ -63,7 +63,7 @@ func (c *TCPClient) SendMessage(msg JsonMessage) error {
 		log.Fatalf("Error while serializing JsonMessage: %v", err)
 	}
 	msgBytes = append(msgBytes, '\n')
-	_, err = c.conn.Write(msgBytes)
+	_, err = c.Conn.Write(msgBytes)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}
@@ -72,7 +72,7 @@ func (c *TCPClient) SendMessage(msg JsonMessage) error {
 
 // sendMessage to server
 func (c *TCPClient) SendRpcMessage(msg *RpcMessage) error {
-	if c.conn == nil {
+	if c.Conn == nil {
 		if err := c.Connect(); err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (c *TCPClient) SendRpcMessage(msg *RpcMessage) error {
 
 	// 将长度前缀和消息本体一起写入连接
 	fullMessage := append(lenPrefix, msgBytes...)
-	_, err = c.conn.Write(fullMessage)
+	_, err = c.Conn.Write(fullMessage)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}

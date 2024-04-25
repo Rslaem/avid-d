@@ -5,7 +5,10 @@ import (
 	"TMAABE/pkg/protobuf"
 	"TMAABE/pkg/utils"
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -15,23 +18,33 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestMainProcess(t *testing.T) {
-	ipList := []string{"127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1",
-		"127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1",
-		"127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1",
-		"127.0.0.1"}
-	portList := []string{"8880", "8881", "8882", "8883", "8884", "8885", "8886", "8887", "8888", "8889",
-		"8870", "8871", "8872", "8873", "8874", "8875", "8876", "8877", "8878", "8879",
-		"8860", "8861", "8862", "8863", "8864", "8865", "8866", "8867", "8868", "8869", "8859"}
+type Address struct {
+	Id   int    `json:"Id"`
+	Addr string `json:"Addr"`
+}
 
-	N := uint32(4)
-	F := uint32(1)
+func TestMainProcess(t *testing.T) {
+	filePath := "../../iplist.json"
+	data, _ := os.Open(filePath)
+	decoder := json.NewDecoder(data)
+	// 解析JSON数据
+	var addresses []Address
+	_ = decoder.Decode(&addresses)
+	fmt.Println(addresses)
+	// 提取地址到列表
+	var addressList []string
+	for _, addr := range addresses {
+		addressList = append(addressList, addr.Addr)
+	}
+
+	N := uint32(16)
+	F := uint32(5)
 	sk, pk := party.SigKeyGen(N, 2*F+1)
 	epk, evk, esks := party.EncKeyGen(N, F+1)
 
 	var p []*party.HonestParty = make([]*party.HonestParty, N)
 	for i := uint32(0); i < N; i++ {
-		p[i] = party.NewHonestParty(N, F, i, ipList, portList, pk, sk[i], epk, evk, esks[i])
+		p[i] = party.NewHonestParty(N, F, i, addressList, pk, sk[i], epk, evk, esks[i])
 	}
 
 	for i := uint32(0); i < N; i++ {

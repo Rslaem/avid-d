@@ -24,10 +24,9 @@ func TestMakeReceiveChannel(t *testing.T) {
 }
 
 func TestMakeSendChannel(t *testing.T) {
-	hostIP := "127.0.0.1"
-	hostPort := "8882"
+	serverAddress := "127.0.0.1:8882"
 
-	sendChannel := MakeSendChannel(hostIP, hostPort)
+	sendChannel := MakeSendChannel(serverAddress)
 	fmt.Println(sendChannel)
 
 	for i := 0; i < 100; i++ {
