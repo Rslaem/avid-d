@@ -2,17 +2,18 @@ package network
 
 import (
 	"encoding/binary"
+
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
-
 	"google.golang.org/protobuf/proto"
 )
 
 type TCPClient struct {
 	ServerAddress string
 	Conn          net.Conn
+
 	isConnected   bool
 }
 
@@ -51,7 +52,6 @@ func (c *TCPClient) Close() error {
 
 // sendMessage to server
 func (c *TCPClient) SendMessage(msg JsonMessage) error {
-
 	if c.Conn == nil {
 		if err := c.Connect(); err != nil {
 			return err
@@ -89,6 +89,7 @@ func (c *TCPClient) SendRpcMessage(msg *RpcMessage) error {
 	// 将长度前缀和消息本体一起写入连接
 	fullMessage := append(lenPrefix, msgBytes...)
 	_, err = c.Conn.Write(fullMessage)
+
 	if err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}

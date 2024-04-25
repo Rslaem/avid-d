@@ -40,7 +40,7 @@ func TestCommitment(t *testing.T) {
 	//tmp6 := append(hasher.SHA256Hasher(tmp4), hasher.SHA256Hasher(tmp5)...)
 	hashlist := [][]byte{hasher.SHA256Hasher([]byte("alice")), hasher.SHA256Hasher(tmp2), hasher.SHA256Hasher(tmp5)}
 	poslist := []bool{true, false, false}
-	want := new(Witness)
+	want := Witness{}
 	want.SetHash(hashlist)
 	want.SetPos(poslist)
 	t.Run("Create the witness", func(t *testing.T) {

@@ -139,7 +139,6 @@ func TestTCPNode_Concurrency(t *testing.T) {
 		nodes[id] = node
 		go node.Start()
 	}
-
 	time.Sleep(2 * time.Second)
 
 	// set connection

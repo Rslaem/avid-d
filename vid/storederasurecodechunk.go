@@ -1,4 +1,4 @@
-package vid 
+package vid
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"encoding/gob"
 	//"fmt"
 
-	escode "TMAABE/erasurecode"
+	escode "github.com/QinYuuuu/avid-d/erasurecode"
 )
 
 // StoredErasureCodeChunk is an erasure chunk that is stored. It could be in the memory
@@ -116,4 +116,3 @@ func (s *StoredErasureCodeChunk) Stash(db KVStore, key []byte) {
 		s.storeOnDisk(s.InMemoryValue, db)
 		s.InMemoryValue = nil
 	}
-}
